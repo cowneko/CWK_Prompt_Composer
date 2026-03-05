@@ -1,0 +1,13 @@
+[
+  {
+    "category": "Aesthetic",
+    "subcategories": [
+      { "name": "Framing",       "tags": ["aerial","ass_focus","between_breasts","between_fingers","between_legs","bust","cinematic_angle","close-up","cowboy_shot","dutch_angle","eyes_focus","face_focus","fisheye","foot_focus","foreshortening","from_above","from_back","from_behind","from_below","from_outside","from_side","front_view","full-length_portrait","full_body","full_shot","half-length_portrait","head_and_shoulders_portrait","head_portrait","hip_focus","landscape","macro_shot","medium_shot","midriff_peek","mirror_selfie","multiple_views","panorama","panty_peek","pantyshot","peeking","phone_screen","portrait","profile","pussy_peek","solo_focus","three-quarter_view","upper_body","upskirt","vehicle_focus","wide_shot","x-ray"] },
+      { "name": "Art Style",     "tags": ["16mm","35mm","3d_render","anime","cartoon","collage","digital_art","dreamworks","hyper_realism","illustration","imax","lomography","manga","oil_painting","panavision","photography","pixar","vector_art","watercolor"] },
+      { "name": "Era",           "tags": ["ancient","ancient_china","ancient_japan","art_deco","cyberpunk","futuristic","medieval","modern_china","renaissance","retro","steampunk","vintage"] },
+      { "name": "Mood",          "tags": ["dark","dreamy","ethereal","gritty","joyful","melancholic","romantic","surreal","whimsical"] },
+      { "name": "Color Palette", "tags": ["cool_colors","golden_hour","monochrome","neon_colors","pastel_colors","sepia","vibrant_colors","warm_colors"] },
+      { "name": "Lighting",      "tags": ["backlighting","blue_light","cinematic_lighting","dramatic_lighting","golden_light","neon_light","rim_light","soft_lighting"] }
+    ]
+  }
+]
