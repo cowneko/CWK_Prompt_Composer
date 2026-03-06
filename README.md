@@ -1,6 +1,6 @@
 # CWK Prompt Composer
 
-A custom node for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that lets you compose positive and negative prompts using a visual **pill-based editor** with tag browsing, presets, drag-to-reorder, weight control, and a lucky prompt generator.
+A custom node for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that lets you compose positive and negative prompts using a visual **pill-based editor** with tag browsing, presets, drag-to-reorder, weight control, a lucky prompt generator, manual override mode, and wildcard file support.
 
 ---
 
@@ -19,7 +19,10 @@ A custom node for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that lets
 - **🎲 I Feel Lucky** — Generate a random coherent prompt from subject / clothing / expression / action / environment pools
 - **🔞 NSFW toggle** — Opt-in to include adult content in the Lucky generator
 - **📌 Add to Tag List** — Pin any custom or free-typed tag back into the persistent JSON tag library
-- **Live preview** — The node canvas shows live previews of the assembled positive and negative prompts
+- **✏️ Manual override mode** — Switch the node to Manual tab to type or paste a full prompt directly, overriding the composer output independently for positive and negative
+- **📂 Wildcard loader** — Load any `.yaml` wildcard file, browse its keys/categories, and insert entries as pills (single pick or random roll)
+- **Live preview** — The node canvas shows live previews of the assembled positive and negative prompts, with the negative preview at half the height of the positive
+- **Resizable preview** — Both preview boxes scale proportionally (2:1 ratio) when you resize the node
 - **Keyboard shortcuts** — `Esc` to cancel, `Ctrl+Enter` to confirm, `Ctrl+Z/Y` for undo/redo
 
 ---
@@ -48,8 +51,10 @@ CWK_Prompt_Composer/
     ├── index.js             ← Extension entry, node draw & state
     ├── pill_canvas.js       ← PillCanvas widget + category colours
     ├── tag_browser.js       ← Flat & 3-level nested tag browsers
-    ├── panel_dialog.js      ← Panel dialog, Lucky generator, NSFW toggle
+    ├── panel_dialog.js      ← Panel dialog, Lucky generator, NSFW toggle, Wildcard button
     ├── preset_manager.js    ← Preset manager, window builder, storage helpers
+    ├── tag_editor.js        ← Add-to-Tag-List panel
+    ├── wildcard_loader.js   ← Wildcard .yaml file loader & picker
     └── tags/
         ├── quality.json     ← Quality prompt tags
         ├── aesthetic.json   ← Aesthetic / style tags
@@ -69,6 +74,15 @@ CWK_Prompt_Composer/
 5. Drag pills to reorder. Right-click a pill to set its weight or add it to the tag library.
 6. Click **✅ Confirm** — the assembled prompt string is written back to the node widget.
 7. The node outputs `positive_prompt` (Quality + Main + Aesthetic joined) and `negative_prompt`.
+
+### 🎨 Composer mode (default)
+The node assembles your pills from each panel into the final prompts automatically. The live preview on the node shows the current positive (large box) and negative (smaller box, half height) prompts.
+
+### ✏️ Manual override mode
+Click the **✏️ Manual** tab on the node to switch to manual mode. Click either preview box to open a text editor where you can type or paste a full prompt directly. This overrides the composer output for that slot. Click **🗑 Clear Override** to revert back to the composer value. A `●` dot on the Manual tab indicates an active override.
+
+### 📂 Wildcard loader
+Inside any panel, click **📂 Wildcards** in the toolbar. Browse to a `.yaml` wildcard file on your machine, select a key/category, then either click an individual entry or click **🎲 Insert Random Entry** to add a random pick as a pill.
 
 ### Keyboard shortcuts (inside a panel)
 | Shortcut | Action |

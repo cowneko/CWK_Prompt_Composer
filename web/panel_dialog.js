@@ -2,6 +2,7 @@ import { PillCanvas }    from "./pill_canvas.js";
 import { buildTagBrowser } from "./tag_browser.js";
 import { presetManager, loadPresets, savePresets, makeWindow } from "./preset_manager.js";
 import { tagEditor }     from "./tag_editor.js";
+import { wildcardLoader } from "./wildcard_loader.js";   // NEW
 
 // ── Tag data store (filled by index.js) ─────────────────────────────────────
 export const TAG_DATA   = { quality: [], aesthetic: [], main: [], negative: [] };
@@ -132,12 +133,27 @@ export class PanelDialog {
         }
 
         // ── Toolbar ────────────────────────────────────────────────────────
+        const wildcardBtn = document.createElement("button");
+        wildcardBtn.textContent = "📂 Wildcards";
+        Object.assign(wildcardBtn.style, {
+            padding: "5px 12px", background: "#1f2a3b", color: "#89dceb",
+            border: "1px solid #89dceb55", borderRadius: "6px", cursor: "pointer",
+            fontSize: "12px", whiteSpace: "nowrap",
+        });
+        wildcardBtn.title = "Load tags from a .yaml wildcard file";
+        wildcardBtn.addEventListener("click", () => {
+            wildcardLoader.show((tag) => {
+                if (tag) this._canvas.addTag(tag, "custom");
+            });
+        });
+
         const toolbar = document.createElement("div");
         Object.assign(toolbar.style, { display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center", flexShrink: "0" });
         toolbar.append(
             mkBtn("🗑 Clear",          "#3b1f1f", () => this._canvas.clear()),
             mkBtn("🔗 Join",           "#1f2d3b", () => this._canvas.joinSelected()),
             mkBtn("✂ Split",           "#1f2d3b", () => this._canvas.splitSelected()),
+            wildcardBtn,                                              // NEW
             mkBtn("💾 Save Preset",    "#1f3b2a", () => this._savePreset()),
             mkBtn("📋 Manage Presets", "#2a1f3b", () => presetManager.show(this._panelKey, this._canvas)),
         );
