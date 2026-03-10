@@ -30,7 +30,7 @@ class TagEditor {
         const mkLabel = (text) => {
             const l = document.createElement("label");
             l.textContent = text;
-            Object.assign(l.style, { color: "#a6adc8", fontSize: "12px", fontWeight: "bold", marginBottom: "2px" });
+            Object.assign(l.style, { color: "#a6adc8", fontSize: "12px", fontWeight: "bold", marginBottom: "2px", fontFamily: "Inter, system-ui, sans-serif" });
             return l;
         };
 
@@ -38,9 +38,9 @@ class TagEditor {
             const s = document.createElement("select");
             Object.assign(s.style, {
                 padding:      "6px 10px",
-                background:   "#1e1e2e",
+                background:   "#1e2335",
                 color:        "#cdd6f4",
-                border:       "1px solid #45475a",
+                border:       "1px solid #313552",
                 borderRadius: "6px",
                 fontSize:     "13px",
                 cursor:       "pointer",
@@ -55,9 +55,9 @@ class TagEditor {
         tagInput.value = tag;
         Object.assign(tagInput.style, {
             padding:      "6px 10px",
-            background:   "#1e1e2e",
+            background:   "#1e2335",
             color:        "#cdd6f4",
-            border:       "1px solid #45475a",
+            border:       "1px solid #313552",
             borderRadius: "6px",
             fontSize:     "13px",
             width:        "100%",
@@ -98,17 +98,19 @@ class TagEditor {
         const confirmBtn = document.createElement("button");
         confirmBtn.textContent = "📌 Add Tag";
         Object.assign(confirmBtn.style, {
-            padding: "8px 20px", background: "#89b4fa", color: "#1e1e2e",
+            padding: "8px 20px", background: "#89b4fa", color: "#141824",
             border: "none", borderRadius: "6px", cursor: "pointer",
             fontWeight: "bold", fontSize: "13px", flex: "1",
+            fontFamily: "Inter, system-ui, sans-serif",
         });
 
         const cancelBtn = document.createElement("button");
         cancelBtn.textContent = "Cancel";
         Object.assign(cancelBtn.style, {
-            padding: "8px 20px", background: "#313244", color: "#cdd6f4",
-            border: "none", borderRadius: "6px", cursor: "pointer",
+            padding: "8px 20px", background: "#1e2335", color: "#cdd6f4",
+            border: "1px solid #313552", borderRadius: "6px", cursor: "pointer",
             fontSize: "13px", flex: "1",
+            fontFamily: "Inter, system-ui, sans-serif",
         });
         cancelBtn.addEventListener("click", () => this.hide());
 
@@ -160,7 +162,7 @@ class TagEditor {
         Object.assign(btnRow.style, { display: "flex", gap: "8px" });
         btnRow.append(confirmBtn, cancelBtn);
 
-        // ── Layout ─────────────────────────────────────────────────────────
+        // ── Layout ───────────────────────────────────────────────────────────
         const grid = document.createElement("div");
         Object.assign(grid.style, { display: "flex", flexDirection: "column", gap: "10px" });
 

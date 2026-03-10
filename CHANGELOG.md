@@ -6,6 +6,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.2.0] - 2026-03-10
+
+### Added
+- **🔌 CLIP input & conditioning outputs** — The node now accepts an optional `CLIP` input and outputs `positive_cond` and `negative_cond` (CONDITIONING) in addition to the string outputs
+  - Eliminates the need for separate CLIP Text Encode nodes in most workflows
+  - Works with SD1.5, SDXL, and Illustrious/Pony models
+- **🔤 A1111 prompt parser** — New `parser` dropdown on the node (`comfy` / `A1111`)
+  - `comfy` — default ComfyUI weight syntax
+  - `A1111` — full Automatic1111 webui-compatible attention parser, self-contained (no external dependencies)
+    - Supports `(word:1.3)`, `((word))`, `[word]`, nested brackets, and `BREAK`
+    - Per-token emphasis with mean normalization — identical results to smZ's CLIP Text Encode++
+    - Parses prompt into weighted token chunks, encodes through the raw CLIP transformer, then applies `z × weights × (original_mean / new_mean)` post-hoc
+    - Works with both single-CLIP (SD1.5) and dual-CLIP (SDXL) models
+- **🎨 Cosmetic refresh** — Node and panel dialog colors updated for visual consistency
+  - Node title bar and body both use `#1a1f2e` to match the CWK Checkpoints Preset Manager style
+  - Panel dialog lower area (below the tag browser) changed to `#1a1f2e` for a unified look across all four prompt panels (Quality, Main, Aesthetic, Negative)
+
+### Technical Details
+- A1111 parser implemented directly in `nodes.py` — zero dependency on ComfyUI_smZNodes
+- Calls `encoder.encode()` directly (raw transformer forward pass) instead of ComfyUI's `encode_token_weights()` to avoid ComfyUI's `(z - z_empty) * w + z_empty` weight formula
+- Automatic discovery of inner tokenizers and encoders via `_get_tokenizer_info()` / `_get_encoder_info()` — handles SD1Tokenizer (`{"l": ...}`) and SDXLTokenizer (`{"g": ..., "l": ...}`) transparently
+- SDXL output concatenated as `[l_out, g_out]` along embed dim with `g_pooled` for pooled output, matching ComfyUI's native `SDXLClipModel.encode_token_weights()` behavior
+
+---
+
 ## [1.1.0] - 2026-03-06
 
 ### Added

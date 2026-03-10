@@ -8,13 +8,14 @@ function buildFlatBrowser(tagData, onTagClick) {
     Object.assign(filterInput.style, {
         width:        "100%",
         padding:      "6px 10px",
-        background:   "#1e1e2e",
+        background:   "#1e2335",
         color:        "#cdd6f4",
-        border:       "1px solid #45475a",
+        border:       "1px solid #313552",
         borderRadius: "6px",
         fontSize:     "13px",
         boxSizing:    "border-box",
         marginBottom: "8px",
+        fontFamily:   "Inter, system-ui, sans-serif",
     });
 
     const browserContent = document.createElement("div");
@@ -43,7 +44,7 @@ function buildFlatBrowser(tagData, onTagClick) {
                 const header = document.createElement("div");
                 Object.assign(header.style, {
                     display: "flex", alignItems: "center", gap: "6px", cursor: "pointer",
-                    padding: "4px 6px", borderRadius: "4px", background: "#1e1e2e",
+                    padding: "4px 6px", borderRadius: "4px", background: "#1e2335",
                     fontSize: "12px", fontWeight: "bold", userSelect: "none",
                     borderLeft: `3px solid ${groupColor}`,
                 });
@@ -68,12 +69,12 @@ function buildFlatBrowser(tagData, onTagClick) {
                     const chip = document.createElement("div");
                     chip.textContent = tag;
                     Object.assign(chip.style, {
-                        padding: "2px 8px", borderRadius: "10px", background: "#1e1e2e",
+                        padding: "2px 8px", borderRadius: "10px", background: "#1e2335",
                         border: `1px solid ${groupColor}88`, color: groupColor + "cc",
                         fontSize: "11px", cursor: "pointer", userSelect: "none", transition: "all 0.1s",
                     });
                     chip.addEventListener("mouseenter", () => { chip.style.background = groupColor + "22"; chip.style.borderColor = groupColor; chip.style.color = groupColor; });
-                    chip.addEventListener("mouseleave", () => { chip.style.background = "#1e1e2e"; chip.style.borderColor = groupColor + "88"; chip.style.color = groupColor + "cc"; });
+                    chip.addEventListener("mouseleave", () => { chip.style.background = "#1e2335"; chip.style.borderColor = groupColor + "88"; chip.style.color = groupColor + "cc"; });
                     chip.addEventListener("click", () => onTagClick(tag, group.category));
                     tagsEl.appendChild(chip);
                 });
@@ -107,13 +108,14 @@ function buildNestedBrowser(tagData, onTagClick) {
     Object.assign(filterInput.style, {
         width:        "100%",
         padding:      "6px 10px",
-        background:   "#1e1e2e",
+        background:   "#1e2335",
         color:        "#cdd6f4",
-        border:       "1px solid #45475a",
+        border:       "1px solid #313552",
         borderRadius: "6px",
         fontSize:     "13px",
         boxSizing:    "border-box",
         marginBottom: "8px",
+        fontFamily:   "Inter, system-ui, sans-serif",
     });
 
     const browserContent = document.createElement("div");
@@ -153,13 +155,13 @@ function buildNestedBrowser(tagData, onTagClick) {
             const catHeader = document.createElement("div");
             Object.assign(catHeader.style, {
                 display: "flex", alignItems: "center", gap: "6px", cursor: "pointer",
-                padding: "5px 8px", borderRadius: "6px", background: "#1e1e2e",
+                padding: "5px 8px", borderRadius: "6px", background: "#1e2335",
                 fontSize: "12px", fontWeight: "bold", userSelect: "none",
                 borderLeft: `3px solid ${groupColor}`,
             });
             catHeader.append(catArrow, catLabel, catCount);
 
-            // ─��� Level 1 body (holds all subcategories) ────────────────────
+            // ── Level 1 body (holds all subcategories) ────────────────────
             const catBody = document.createElement("div");
             Object.assign(catBody.style, {
                 display:       catCollapsed ? "none" : "flex",
@@ -200,7 +202,7 @@ function buildNestedBrowser(tagData, onTagClick) {
                 const subHeader = document.createElement("div");
                 Object.assign(subHeader.style, {
                     display: "flex", alignItems: "center", gap: "5px", cursor: "pointer",
-                    padding: "3px 6px", borderRadius: "4px", background: "#181825",
+                    padding: "3px 6px", borderRadius: "4px", background: "#141824",
                     fontSize: "11px", fontWeight: "bold", userSelect: "none",
                     borderLeft: `2px solid ${groupColor}55`,
                 });
@@ -219,12 +221,12 @@ function buildNestedBrowser(tagData, onTagClick) {
                     const chip = document.createElement("div");
                     chip.textContent = tag;
                     Object.assign(chip.style, {
-                        padding: "2px 8px", borderRadius: "10px", background: "#1e1e2e",
+                        padding: "2px 8px", borderRadius: "10px", background: "#1e2335",
                         border: `1px solid ${groupColor}66`, color: groupColor + "aa",
                         fontSize: "11px", cursor: "pointer", userSelect: "none", transition: "all 0.1s",
                     });
                     chip.addEventListener("mouseenter", () => { chip.style.background = groupColor + "22"; chip.style.borderColor = groupColor; chip.style.color = groupColor; });
-                    chip.addEventListener("mouseleave", () => { chip.style.background = "#1e1e2e"; chip.style.borderColor = groupColor + "66"; chip.style.color = groupColor + "aa"; });
+                    chip.addEventListener("mouseleave", () => { chip.style.background = "#1e2335"; chip.style.borderColor = groupColor + "66"; chip.style.color = groupColor + "aa"; });
                     chip.addEventListener("click", () => onTagClick(tag, group.category));
                     tagsEl.appendChild(chip);
                 });
@@ -253,7 +255,7 @@ function buildNestedBrowser(tagData, onTagClick) {
     return wrapper;
 }
 
-// ── Public entry point ────���───────────────────────────────────────────────────
+// ── Public entry point ───────────────────────────────────────────────────────
 export function buildTagBrowser(tagData, panelKey, onTagClick) {
     return panelKey === "main"
         ? buildNestedBrowser(tagData, onTagClick)

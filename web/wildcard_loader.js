@@ -120,9 +120,10 @@ class WildcardLoader {
         const browseBtn = document.createElement("button");
         browseBtn.textContent = "📂 Browse…";
         Object.assign(browseBtn.style, {
-            padding: "6px 14px", background: "#1f2d3b", color: "#89dceb",
+            padding: "6px 14px", background: "#1a2535", color: "#89dceb",
             border: "1px solid #89dceb55", borderRadius: "6px",
             cursor: "pointer", fontSize: "12px", whiteSpace: "nowrap",
+            fontFamily: "Inter, system-ui, sans-serif",
         });
 
         const fileInput = document.createElement("input");
@@ -159,9 +160,9 @@ class WildcardLoader {
         Object.assign(keySelect.style, {
             width:        "100%",
             padding:      "6px 10px",
-            background:   "#1e1e2e",
+            background:   "#1e2335",
             color:        "#cdd6f4",
-            border:       "1px solid #45475a",
+            border:       "1px solid #313552",
             borderRadius: "6px",
             fontSize:     "13px",
             cursor:       "pointer",
@@ -182,8 +183,8 @@ class WildcardLoader {
         // Value list (scrollable)
         const listWrap = document.createElement("div");
         Object.assign(listWrap.style, {
-            maxHeight: "200px", overflowY: "auto", background: "#11111b",
-            border: "1px solid #313244", borderRadius: "6px", padding: "6px",
+            maxHeight: "200px", overflowY: "auto", background: "#141824",
+            border: "1px solid #313552", borderRadius: "6px", padding: "6px",
             display: "flex", flexWrap: "wrap", gap: "4px",
         });
 
@@ -193,7 +194,7 @@ class WildcardLoader {
             if (values.length === 0) {
                 const empty = document.createElement("span");
                 empty.textContent = "(no entries)";
-                Object.assign(empty.style, { color: "#45475a", fontSize: "12px", padding: "4px" });
+                Object.assign(empty.style, { color: "#313552", fontSize: "12px", padding: "4px" });
                 listWrap.appendChild(empty);
                 return;
             }
@@ -201,12 +202,12 @@ class WildcardLoader {
                 const chip = document.createElement("div");
                 chip.textContent = val;
                 Object.assign(chip.style, {
-                    padding: "2px 10px", borderRadius: "10px", background: "#1e1e2e",
+                    padding: "2px 10px", borderRadius: "10px", background: "#1e2335",
                     border: "1px solid #89dceb55", color: "#89dcebcc",
                     fontSize: "11px", cursor: "pointer", userSelect: "none", transition: "all 0.1s",
                 });
                 chip.addEventListener("mouseenter", () => { chip.style.background = "#89dceb22"; chip.style.borderColor = "#89dceb"; chip.style.color = "#89dceb"; });
-                chip.addEventListener("mouseleave", () => { chip.style.background = "#1e1e2e";   chip.style.borderColor = "#89dceb55"; chip.style.color = "#89dcebcc"; });
+                chip.addEventListener("mouseleave", () => { chip.style.background = "#1e2335";   chip.style.borderColor = "#89dceb55"; chip.style.color = "#89dcebcc"; });
                 chip.addEventListener("click", () => {
                     this._callback?.(val);
                     this.hide();
@@ -224,9 +225,10 @@ class WildcardLoader {
         rollBtn.textContent = "🎲 Insert Random Entry";
         Object.assign(rollBtn.style, {
             marginTop: "8px", padding: "7px 16px", width: "100%",
-            background: "#2a1f3b", color: "#cba6f7",
+            background: "#1f2040", color: "#cba6f7",
             border: "1px solid #cba6f7", borderRadius: "6px",
             cursor: "pointer", fontSize: "12px", fontWeight: "bold",
+            fontFamily: "Inter, system-ui, sans-serif",
         });
         rollBtn.addEventListener("click", () => {
             const values = this._data[keySelect.value] || [];
@@ -238,13 +240,14 @@ class WildcardLoader {
         step3.appendChild(rollBtn);
         this._body.appendChild(step3);
 
-        // ── Cancel ─────────────────────────────────────────────────────────
+        // ── Cancel ───────────────────────────────────────────────────────────
         const cancelBtn = document.createElement("button");
         cancelBtn.textContent = "Close";
         Object.assign(cancelBtn.style, {
-            marginTop: "4px", padding: "6px 18px", background: "#313244",
-            color: "#cdd6f4", border: "none", borderRadius: "6px",
+            marginTop: "4px", padding: "6px 18px", background: "#1e2335",
+            color: "#cdd6f4", border: "1px solid #313552", borderRadius: "6px",
             cursor: "pointer", fontSize: "12px", alignSelf: "flex-end",
+            fontFamily: "Inter, system-ui, sans-serif",
         });
         cancelBtn.addEventListener("click", () => this.hide());
         this._body.appendChild(cancelBtn);
@@ -255,7 +258,7 @@ class WildcardLoader {
         Object.assign(wrap.style, { display: "flex", flexDirection: "column", gap: "6px" });
         const lbl = document.createElement("div");
         lbl.textContent = labelText;
-        Object.assign(lbl.style, { color: "#89b4fa", fontSize: "11px", fontWeight: "bold", letterSpacing: "0.04em", textTransform: "uppercase" });
+        Object.assign(lbl.style, { color: "#89b4fa", fontSize: "11px", fontWeight: "bold", letterSpacing: "0.04em", textTransform: "uppercase", fontFamily: "Inter, system-ui, sans-serif" });
         wrap.appendChild(lbl);
         return wrap;
     }

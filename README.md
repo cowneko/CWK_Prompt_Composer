@@ -1,6 +1,6 @@
 # CWK Prompt Composer
 
-A custom node for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that lets you compose positive and negative prompts using a visual **pill-based editor** with tag browsing, presets, drag-to-reorder, weight control, a lucky prompt generator, manual override mode, and wildcard file support.
+A custom node for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that lets you compose positive and negative prompts using a visual **pill-based editor** with tag browsing, presets, drag-to-reorder, weight control, a lucky prompt generator, manual override mode, wildcard file support, and **built-in CLIP encoding with A1111-compatible prompt parsing**.
 
 ---
 
@@ -21,6 +21,8 @@ A custom node for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that lets
 - **📌 Add to Tag List** — Pin any custom or free-typed tag back into the persistent JSON tag library
 - **✏️ Manual override mode** — Switch the node to Manual tab to type or paste a full prompt directly, overriding the composer output independently for positive and negative
 - **📂 Wildcard loader** — Load any `.yaml` wildcard file, browse its keys/categories, and insert entries as pills (single pick or random roll)
+- **🔌 Built-in CLIP encoding** — Optional `CLIP` input with `positive_cond` and `negative_cond` conditioning outputs — no separate CLIP Text Encode node needed
+- **🔤 A1111 prompt parser** — Selectable `parser` option (`comfy` / `A1111`) for Automatic1111-compatible prompt weighting with per-token emphasis and mean normalization — produces identical results to smZ's CLIP Text Encode++ with zero external dependencies
 - **Live preview** — The node canvas shows live previews of the assembled positive and negative prompts, with the negative preview at half the height of the positive
 - **Resizable preview** — Both preview boxes scale proportionally (2:1 ratio) when you resize the node
 - **Keyboard shortcuts** — `Esc` to cancel, `Ctrl+Enter` to confirm, `Ctrl+Z/Y` for undo/redo
@@ -46,7 +48,7 @@ Then restart ComfyUI.
 ```
 CWK_Prompt_Composer/
 ├── __init__.py              ← Node registration + web directory
-├── nodes.py                 ← Python node + /cwk/add_tag API route
+├── nodes.py                 ← Python node, CLIP encoding, A1111 parser, /cwk/add_tag API
 └── web/
     ├── index.js             ← Extension entry, node draw & state
     ├── pill_canvas.js       ← PillCanvas widget + category colours
@@ -68,12 +70,31 @@ CWK_Prompt_Composer/
 ## 🖱️ Usage
 
 1. Add the **CWK Prompt Composer** node to your workflow.
-2. Click any of the four buttons on the node (⭐ Quality, 🖼️ Main, 🎨 Aesthetic, ❌ Negative) to open its panel.
-3. Browse or filter tags in the bottom browser and click to add them as pills.
-4. Type a custom tag in the input bar and press **Enter**.
-5. Drag pills to reorder. Right-click a pill to set its weight or add it to the tag library.
-6. Click **✅ Confirm** — the assembled prompt string is written back to the node widget.
-7. The node outputs `positive_prompt` (Quality + Main + Aesthetic joined) and `negative_prompt`.
+2. Connect a **CLIP** model to the optional `clip` input (to get conditioning outputs directly).
+3. Choose a **parser** (`comfy` or `A1111`) from the dropdown on the node.
+4. Click any of the four buttons on the node (⭐ Quality, 🖼️ Main, 🎨 Aesthetic, ❌ Negative) to open its panel.
+5. Browse or filter tags in the bottom browser and click to add them as pills.
+6. Type a custom tag in the input bar and press **Enter**.
+7. Drag pills to reorder. Right-click a pill to set its weight or add it to the tag library.
+8. Click **✅ Confirm** — the assembled prompt string is written back to the node widget.
+
+### Outputs
+
+| Output | Type | Description |
+|---|---|---|
+| `positive_prompt` | STRING | Quality + Main + Aesthetic joined with `, ` |
+| `negative_prompt` | STRING | Negative prompt string |
+| `positive_cond` | CONDITIONING | Encoded positive conditioning (requires CLIP input) |
+| `negative_cond` | CONDITIONING | Encoded negative conditioning (requires CLIP input) |
+
+### 🔤 Parser options
+
+| Parser | Behaviour |
+|---|---|
+| `comfy` | Default ComfyUI syntax — weights applied as `(z - z_empty) × w + z_empty` |
+| `A1111` | Automatic1111 webui syntax — `(word:1.3)`, `((word))`, `[word]`, `BREAK` — per-token emphasis with mean normalization, identical to smZ CLIP Text Encode++ |
+
+> **Note:** The A1111 parser is fully self-contained. It does **not** require ComfyUI_smZNodes to be installed.
 
 ### 🎨 Composer mode (default)
 The node assembles your pills from each panel into the final prompts automatically. The live preview on the node shows the current positive (large box) and negative (smaller box, half height) prompts.

@@ -2,7 +2,7 @@ import { PillCanvas }    from "./pill_canvas.js";
 import { buildTagBrowser } from "./tag_browser.js";
 import { presetManager, loadPresets, savePresets, makeWindow } from "./preset_manager.js";
 import { tagEditor }     from "./tag_editor.js";
-import { wildcardLoader } from "./wildcard_loader.js";   // NEW
+import { wildcardLoader } from "./wildcard_loader.js";
 
 // ── Tag data store (filled by index.js) ─────────────────────────────────────
 export const TAG_DATA   = { quality: [], aesthetic: [], main: [], negative: [] };
@@ -70,7 +70,7 @@ export class PanelDialog {
         const mkBtn = (text, bg, onClick) => {
             const btn = document.createElement("button");
             btn.textContent = text;
-            Object.assign(btn.style, { padding: "5px 12px", background: bg, color: "#cdd6f4", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", whiteSpace: "nowrap" });
+            Object.assign(btn.style, { padding: "5px 12px", background: bg, color: "#cdd6f4", border: "1px solid #313552", borderRadius: "6px", cursor: "pointer", fontSize: "12px", whiteSpace: "nowrap", fontFamily: "Inter, system-ui, sans-serif" });
             btn.addEventListener("click", onClick);
             return btn;
         };
@@ -79,7 +79,7 @@ export class PanelDialog {
         const freeInput = document.createElement("input");
         freeInput.type        = "text";
         freeInput.placeholder = "✏️ Type a custom tag and press Enter…";
-        Object.assign(freeInput.style, { flex: "1", padding: "5px 10px", background: "#1e1e2e", color: "#cdd6f4", border: "1px solid #45475a", borderRadius: "6px", fontSize: "12px", minWidth: "0" });
+        Object.assign(freeInput.style, { flex: "1", padding: "5px 10px", background: "#1e2335", color: "#cdd6f4", border: "1px solid #313552", borderRadius: "6px", fontSize: "12px", minWidth: "0" });
         freeInput.addEventListener("keydown", (e) => {
             if (e.key !== "Enter") return;
             e.stopPropagation();
@@ -88,15 +88,15 @@ export class PanelDialog {
         });
 
         // 📌 add free-typed tag to list
-        const pinBtn = mkBtn("📌", "#2a2a3b", () => {
+        const pinBtn = mkBtn("📌", "#1a2535", () => {
             const val = freeInput.value.trim();
             if (!val) return;
             tagEditor.show(val, TAG_DATA[panelKey], panelKey);
         });
         pinBtn.title = "Add this tag to the JSON list";
 
-        const undoBtn = mkBtn("↩ Undo", "#2a2a3b", () => this._canvas.undo());
-        const redoBtn = mkBtn("↪ Redo", "#2a2a3b", () => this._canvas.redo());
+        const undoBtn = mkBtn("↩ Undo", "#1a2535", () => this._canvas.undo());
+        const redoBtn = mkBtn("↪ Redo", "#1a2535", () => this._canvas.redo());
 
         const freeRow = document.createElement("div");
         Object.assign(freeRow.style, { display: "flex", gap: "6px", alignItems: "center", flexShrink: "0" });
@@ -112,9 +112,10 @@ export class PanelDialog {
                 Object.assign(nsfwToggle.style, {
                     padding: "5px 12px", borderRadius: "6px", cursor: "pointer",
                     fontSize: "12px", fontWeight: "bold", whiteSpace: "nowrap", border: "1px solid",
-                    background:  nsfwOn ? "#3b1a2a" : "#2a2a3b",
+                    fontFamily: "Inter, system-ui, sans-serif",
+                    background:  nsfwOn ? "#2a1525" : "#1a2535",
                     color:       nsfwOn ? "#f38ba8" : "#6c7086",
-                    borderColor: nsfwOn ? "#f38ba8" : "#45475a",
+                    borderColor: nsfwOn ? "#f38ba8" : "#313552",
                     transition:  "all 0.15s",
                 });
             };
@@ -123,7 +124,7 @@ export class PanelDialog {
 
             const luckyBtn = document.createElement("button");
             luckyBtn.textContent = "🎲 I Feel Lucky";
-            Object.assign(luckyBtn.style, { padding: "5px 14px", background: "#2a1f3b", color: "#cba6f7", border: "1px solid #cba6f7", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "bold", whiteSpace: "nowrap" });
+            Object.assign(luckyBtn.style, { padding: "5px 14px", background: "#1f2040", color: "#cba6f7", border: "1px solid #cba6f7", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "bold", whiteSpace: "nowrap", fontFamily: "Inter, system-ui, sans-serif" });
             luckyBtn.addEventListener("click", () => this._canvas.setLucky(generateLuckyPrompt(getNsfw())));
 
             const luckyRow = document.createElement("div");
@@ -136,9 +137,10 @@ export class PanelDialog {
         const wildcardBtn = document.createElement("button");
         wildcardBtn.textContent = "📂 Wildcards";
         Object.assign(wildcardBtn.style, {
-            padding: "5px 12px", background: "#1f2a3b", color: "#89dceb",
+            padding: "5px 12px", background: "#1a2535", color: "#89dceb",
             border: "1px solid #89dceb55", borderRadius: "6px", cursor: "pointer",
             fontSize: "12px", whiteSpace: "nowrap",
+            fontFamily: "Inter, system-ui, sans-serif",
         });
         wildcardBtn.title = "Load tags from a .yaml wildcard file";
         wildcardBtn.addEventListener("click", () => {
@@ -150,12 +152,12 @@ export class PanelDialog {
         const toolbar = document.createElement("div");
         Object.assign(toolbar.style, { display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center", flexShrink: "0" });
         toolbar.append(
-            mkBtn("🗑 Clear",          "#3b1f1f", () => this._canvas.clear()),
-            mkBtn("🔗 Join",           "#1f2d3b", () => this._canvas.joinSelected()),
-            mkBtn("✂ Split",           "#1f2d3b", () => this._canvas.splitSelected()),
-            wildcardBtn,                                              // NEW
-            mkBtn("💾 Save Preset",    "#1f3b2a", () => this._savePreset()),
-            mkBtn("📋 Manage Presets", "#2a1f3b", () => presetManager.show(this._panelKey, this._canvas)),
+            mkBtn("🗑 Clear",          "#2a1525", () => this._canvas.clear()),
+            mkBtn("🔗 Join",           "#1a2535", () => this._canvas.joinSelected()),
+            mkBtn("✂ Split",           "#1a2535", () => this._canvas.splitSelected()),
+            wildcardBtn,
+            mkBtn("💾 Save Preset",    "#1a2535", () => this._savePreset()),
+            mkBtn("📋 Manage Presets", "#1f2040", () => presetManager.show(this._panelKey, this._canvas)),
         );
 
         // ── Browser ────────────────────────────────────────────────────────
@@ -167,12 +169,12 @@ export class PanelDialog {
         // ── Bottom bar ─────────────────────────────────────────────────────
         const cancelBtn = document.createElement("button");
         cancelBtn.textContent = "Cancel";
-        Object.assign(cancelBtn.style, { padding: "8px 20px", background: "#313244", color: "#cdd6f4", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px" });
+        Object.assign(cancelBtn.style, { padding: "8px 20px", background: "#1e2335", color: "#cdd6f4", border: "1px solid #313552", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontFamily: "Inter, system-ui, sans-serif" });
         cancelBtn.addEventListener("click", () => this._cancel());
 
         const confirmBtn = document.createElement("button");
         confirmBtn.textContent = "✅ Confirm";
-        Object.assign(confirmBtn.style, { padding: "8px 24px", background: "#89b4fa", color: "#1e1e2e", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold", fontSize: "14px" });
+        Object.assign(confirmBtn.style, { padding: "8px 24px", background: "#89b4fa", color: "#141824", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold", fontSize: "14px", fontFamily: "Inter, system-ui, sans-serif" });
         confirmBtn.addEventListener("click", () => this._confirm());
 
         const bottomBar = document.createElement("div");
@@ -180,7 +182,7 @@ export class PanelDialog {
         bottomBar.append(cancelBtn, confirmBtn);
 
         const hr = document.createElement("hr");
-        Object.assign(hr.style, { border: "none", borderTop: "1px solid #313244", margin: "0", flexShrink: "0" });
+        Object.assign(hr.style, { border: "none", borderTop: "1px solid #313552", margin: "0", flexShrink: "0" });
 
         this._body.append(
             this._canvas.el,

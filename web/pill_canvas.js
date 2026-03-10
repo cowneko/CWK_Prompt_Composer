@@ -37,8 +37,8 @@ export class PillCanvas {
             minHeight:    "80px",
             maxHeight:    "160px",
             overflowY:    "auto",
-            background:   "#11111b",
-            border:       "1px solid #313244",
+            background:   "#141824",
+            border:       "1px solid #313552",
             borderRadius: "8px",
             padding:      "8px",
             display:      "flex",
@@ -171,8 +171,8 @@ export class PillCanvas {
         Object.assign(menu.style, {
             position:      "fixed",
             zIndex:        "99999",
-            background:    "#1e1e2e",
-            border:        "1px solid #45475a",
+            background:    "#1e2335",
+            border:        "1px solid #313552",
             borderRadius:  "8px",
             padding:       "4px",
             boxShadow:     "0 4px 20px rgba(0,0,0,0.6)",
@@ -194,13 +194,14 @@ export class PillCanvas {
                 fontSize:     "12px",
                 color:        "#cdd6f4",
                 userSelect:   "none",
+                fontFamily:   "Inter, system-ui, sans-serif",
             });
             const iconEl = document.createElement("span");
             iconEl.textContent = icon;
             const labelEl = document.createElement("span");
             labelEl.textContent = label;
             item.append(iconEl, labelEl);
-            item.addEventListener("mouseenter", () => item.style.background = "#313244");
+            item.addEventListener("mouseenter", () => item.style.background = "#2a2f45");
             item.addEventListener("mouseleave", () => item.style.background = "transparent");
             item.addEventListener("click", () => { this._closeCtxMenu(); onClick(); });
             return item;
@@ -208,7 +209,7 @@ export class PillCanvas {
 
         // divider
         const divider = document.createElement("hr");
-        Object.assign(divider.style, { border: "none", borderTop: "1px solid #313244", margin: "2px 0" });
+        Object.assign(divider.style, { border: "none", borderTop: "1px solid #313552", margin: "2px 0" });
 
         // pill name header
         const header = document.createElement("div");
@@ -254,14 +255,14 @@ export class PillCanvas {
         const popover = document.createElement("div");
         this._weightPopover = popover;
         Object.assign(popover.style, {
-            position: "fixed", zIndex: "99999", background: "#1e1e2e",
-            border: "1px solid #45475a", borderRadius: "8px", padding: "10px 14px",
+            position: "fixed", zIndex: "99999", background: "#1e2335",
+            border: "1px solid #313552", borderRadius: "8px", padding: "10px 14px",
             boxShadow: "0 4px 20px rgba(0,0,0,0.6)", display: "flex",
             flexDirection: "column", gap: "8px", minWidth: "200px",
         });
 
         const label = document.createElement("div");
-        Object.assign(label.style, { color: "#cdd6f4", fontSize: "12px", fontWeight: "bold" });
+        Object.assign(label.style, { color: "#cdd6f4", fontSize: "12px", fontWeight: "bold", fontFamily: "Inter, system-ui, sans-serif" });
         label.textContent = `⚖ Weight: ${pill.text}`;
 
         const row = document.createElement("div");
@@ -287,7 +288,7 @@ export class PillCanvas {
 
         const resetBtn = document.createElement("button");
         resetBtn.textContent = "Reset";
-        Object.assign(resetBtn.style, { padding: "3px 8px", background: "#313244", color: "#cdd6f4", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px" });
+        Object.assign(resetBtn.style, { padding: "3px 8px", background: "#1a1f2e", color: "#cdd6f4", border: "1px solid #313552", borderRadius: "4px", cursor: "pointer", fontSize: "11px" });
         resetBtn.addEventListener("click", () => {
             this._snapshot();
             pill.weight = 1.0; slider.value = "1.0"; valueLabel.textContent = "1.0";
@@ -311,7 +312,7 @@ export class PillCanvas {
         this.el.innerHTML = "";
         if (this.pills.length === 0) {
             const placeholder = document.createElement("span");
-            Object.assign(placeholder.style, { color: "#45475a", fontSize: "12px", padding: "4px" });
+            Object.assign(placeholder.style, { color: "#313552", fontSize: "12px", padding: "4px" });
             placeholder.textContent = "Click tags below to add them here…";
             this.el.appendChild(placeholder);
             return;
@@ -327,7 +328,7 @@ export class PillCanvas {
             Object.assign(pillEl.style, {
                 display: "inline-flex", alignItems: "center", gap: "4px",
                 padding: "3px 8px", borderRadius: "12px",
-                background: selected ? `${color}22` : "#1e1e2e",
+                background: selected ? `${color}22` : "#1e2335",
                 border:     `1px solid ${selected ? color : color + "88"}`,
                 cursor:     "grab", fontSize: "12px",
                 color:      selected ? color : color + "cc",
@@ -341,7 +342,7 @@ export class PillCanvas {
             if (hasWeight) {
                 const badge = document.createElement("span");
                 badge.textContent = pill.weight.toFixed(1);
-                Object.assign(badge.style, { fontSize: "9px", background: "#313244", color: "#89b4fa", borderRadius: "4px", padding: "1px 3px", fontWeight: "bold", lineHeight: "1.2" });
+                Object.assign(badge.style, { fontSize: "9px", background: "#1a1f2e", color: "#89b4fa", borderRadius: "4px", padding: "1px 3px", fontWeight: "bold", lineHeight: "1.2" });
                 pillEl.appendChild(badge);
             }
 
