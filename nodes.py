@@ -81,7 +81,7 @@ async def get_tags(request):
 
 @server.PromptServer.instance.routes.post("/cwk/add_tag")
 async def add_tag(request):
-    """Append a tag to one of the four .txt tag files."""
+    """Add a tag to a .txt tag file in alphabetical order."""
     try:
         data = await request.json()
         key  = data.get("key", "").strip()
@@ -100,19 +100,66 @@ async def add_tag(request):
                 f.write("")
 
         with open(filepath, "r", encoding="utf-8") as f:
-            existing = set(line.strip() for line in f if line.strip())
+            existing = [line.strip() for line in f if line.strip()]
 
         if tag in existing:
             return web.json_response({"ok": False, "duplicate": True, "tag": tag})
 
-        with open(filepath, "a", encoding="utf-8") as f:
-            f.write(tag + "\n")
+        # Insert alphabetically (case-insensitive)
+        import bisect
+        lower_list = [t.lower() for t in existing]
+        insert_pos = bisect.bisect_left(lower_list, tag.lower())
+        existing.insert(insert_pos, tag)
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write("\n".join(existing) + "\n")
 
         return web.json_response({"ok": True, "tag": tag, "key": key})
 
     except Exception as e:
         return web.json_response({"ok": False, "error": str(e)}, status=500)
+        
+@server.PromptServer.instance.routes.post("/cwk/export")
+async def export_data(request):
+    """Export selected tag files and/or presets as a JSON bundle for download."""
+    try:
+        data = await request.json()
+        items = data.get("items", [])  # e.g. ["quality", "style", "main", "aesthetic", "negative", "presets"]
 
+        result = {}
+
+        for item in items:
+            if item == "presets":
+                # Bundle all presets
+                presets = {}
+                for f in os.listdir(PRESET_DIR):
+                    if not f.lower().endswith(".json"):
+                        continue
+                    filepath = os.path.join(PRESET_DIR, f)
+                    try:
+                        with open(filepath, "r", encoding="utf-8") as fh:
+                            pdata = json.load(fh)
+                        name = pdata.get("name", os.path.splitext(f)[0])
+                        presets[name] = {
+                            "category": pdata.get("category", "main"),
+                            "pills": pdata.get("pills", []),
+                        }
+                    except Exception:
+                        pass
+                result["presets"] = presets
+            elif item in TAG_FILES:
+                filepath = TAG_FILES[item]
+                if os.path.exists(filepath):
+                    with open(filepath, "r", encoding="utf-8") as fh:
+                        tags = [line.strip() for line in fh if line.strip()]
+                    result[item] = tags
+                else:
+                    result[item] = []
+
+        return web.json_response({"ok": True, "data": result})
+
+    except Exception as e:
+        return web.json_response({"ok": False, "error": str(e)}, status=500)
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  EMBEDDING ENDPOINT

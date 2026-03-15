@@ -6,6 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.3.0] - 2026-03-15
+
+### Added
+- **📤 Export dialog** — New "📤 Export" button in the tag-mode toolbar opens a panel with checkboxes to select which data to export:
+  - Quality tags, Style tags, Main tags, Aesthetic tags, Negative tags (each as `.txt`)
+  - Prompt presets (as `cwk_presets.json`)
+  - Select All / Select None quick buttons
+  - Each selected item downloads as a separate file via browser download
+- **`POST /cwk/export` endpoint** — New server endpoint that returns selected tag lists and/or presets as a JSON bundle
+
+### Changed
+- **Alphabetical tag insertion** — When adding a tag via "📌 Add to Tag List", the tag is now inserted in **alphabetical order** (case-insensitive) instead of being appended to the end of the file. Uses `bisect.bisect_left` for efficient sorted insertion and rewrites the file to maintain order.
+
+---
+
 ## [2.2.0] - 2026-03-15
 
 ### Added

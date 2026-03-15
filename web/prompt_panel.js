@@ -495,6 +495,199 @@ function openPresetManager(onLoad) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+//  EXPORT DIALOG
+// ══════════════════════════════════════════════════════════════════════════════
+function openExportDialog() {
+    const { win, backdrop, body, closeBtn } = makeWindow({
+        title: "📤 Export Data", width: "400px", height: "auto",
+        minWidth: "320px", minHeight: "200px", zIndex: "10004",
+    });
+    Object.assign(win.style, { height: "auto" });
+
+    const hide = () => { backdrop.style.display = "none"; win.style.display = "none"; win.remove(); backdrop.remove(); };
+    closeBtn.addEventListener("click", hide);
+
+    const ITEMS = [
+        { key: "quality",   label: "⭐ Quality Tags",   color: SECTION_COLORS.quality },
+        { key: "style",     label: "🎭 Style Tags",     color: SECTION_COLORS.style },
+        { key: "main",      label: "🖼️ Main Tags",      color: SECTION_COLORS.main },
+        { key: "aesthetic", label: "🎨 Aesthetic Tags", color: SECTION_COLORS.aesthetic },
+        { key: "negative",  label: "❌ Negative Tags",  color: SECTION_COLORS.negative },
+        { key: "presets",   label: "📋 Prompt Presets", color: C.textBlue },
+    ];
+
+    const checkboxes = {};
+
+    const grid = document.createElement("div");
+    Object.assign(grid.style, { display: "flex", flexDirection: "column", gap: "8px" });
+
+    const desc = document.createElement("div");
+    desc.textContent = "Select items to export:";
+    Object.assign(desc.style, { color: C.textDim, fontSize: "12px", fontFamily: "Inter, system-ui, sans-serif" });
+    grid.appendChild(desc);
+
+    for (const item of ITEMS) {
+        const row = document.createElement("label");
+        Object.assign(row.style, {
+            display: "flex", alignItems: "center", gap: "8px",
+            padding: "6px 10px", borderRadius: "6px", cursor: "pointer",
+            background: C.surface, border: `1px solid ${C.border}`,
+            fontSize: "12px", color: item.color, fontFamily: "Inter, system-ui, sans-serif",
+            userSelect: "none",
+        });
+        row.addEventListener("mouseenter", () => row.style.background = C.hoverBg);
+        row.addEventListener("mouseleave", () => row.style.background = C.surface);
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = true;
+        cb.style.accentColor = item.color;
+        for (const evt of ["mousedown", "mouseup", "click", "keydown"]) {
+            cb.addEventListener(evt, (e) => e.stopPropagation());
+        }
+
+        const lbl = document.createElement("span");
+        lbl.textContent = item.label;
+
+        row.append(cb, lbl);
+        grid.appendChild(row);
+        checkboxes[item.key] = cb;
+    }
+
+    // Select All / None
+    const selRow = document.createElement("div");
+    Object.assign(selRow.style, { display: "flex", gap: "8px", justifyContent: "center" });
+
+    const mkSmBtn = (text, onClick) => {
+        const btn = document.createElement("button");
+        btn.textContent = text;
+        Object.assign(btn.style, {
+            padding: "2px 10px", background: C.surface, color: C.textDim,
+            border: `1px solid ${C.border}`, borderRadius: "4px",
+            cursor: "pointer", fontSize: "11px", fontFamily: "Inter, system-ui, sans-serif",
+        });
+        btn.addEventListener("click", (e) => { e.stopPropagation(); onClick(); });
+        return btn;
+    };
+
+    selRow.appendChild(mkSmBtn("Select All", () => {
+        for (const cb of Object.values(checkboxes)) cb.checked = true;
+    }));
+    selRow.appendChild(mkSmBtn("Select None", () => {
+        for (const cb of Object.values(checkboxes)) cb.checked = false;
+    }));
+    grid.appendChild(selRow);
+
+    const status = document.createElement("div");
+    Object.assign(status.style, { fontSize: "12px", minHeight: "16px", textAlign: "center" });
+
+    const btnRow = document.createElement("div");
+    Object.assign(btnRow.style, { display: "flex", gap: "8px" });
+
+    const exportBtn = document.createElement("button");
+    exportBtn.textContent = "📤 Export";
+    Object.assign(exportBtn.style, {
+        flex: "1", padding: "8px", background: "#89b4fa", color: "#141824",
+        border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
+        fontSize: "13px", fontFamily: "Inter, system-ui, sans-serif",
+    });
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Cancel";
+    Object.assign(cancelBtn.style, {
+        flex: "1", padding: "8px", background: C.surface, color: C.text,
+        border: `1px solid ${C.border}`, borderRadius: "6px", cursor: "pointer",
+        fontSize: "13px", fontFamily: "Inter, system-ui, sans-serif",
+    });
+    cancelBtn.addEventListener("click", hide);
+
+    exportBtn.addEventListener("click", async () => {
+        const selected = Object.entries(checkboxes)
+            .filter(([_, cb]) => cb.checked)
+            .map(([key]) => key);
+
+        if (selected.length === 0) {
+            status.style.color = "#f9e2af";
+            status.textContent = "⚠️ Select at least one item";
+            return;
+        }
+
+        exportBtn.disabled = true;
+        exportBtn.textContent = "Exporting…";
+        status.textContent = "";
+
+        try {
+            const res = await fetch("/cwk/export", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ items: selected }),
+            });
+            const json = await res.json();
+
+            if (!json.ok) {
+                status.style.color = "#f38ba8";
+                status.textContent = `❌ ${json.error}`;
+                exportBtn.disabled = false;
+                exportBtn.textContent = "📤 Export";
+                return;
+            }
+
+            const data = json.data;
+            let fileCount = 0;
+
+            // Export each tag file as .txt
+            for (const key of ["quality", "style", "main", "aesthetic", "negative"]) {
+                if (data[key]) {
+                    const content = data[key].join("\n") + "\n";
+                    const blob = new Blob([content], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `${key}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    fileCount++;
+                    // Small delay between downloads so browser doesn't block them
+                    await new Promise(r => setTimeout(r, 300));
+                }
+            }
+
+            // Export presets as JSON
+            if (data.presets) {
+                const content = JSON.stringify(data.presets, null, 2);
+                const blob = new Blob([content], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "cwk_presets.json";
+                a.click();
+                URL.revokeObjectURL(url);
+                fileCount++;
+            }
+
+            status.style.color = "#a6e3a1";
+            status.textContent = `✅ Exported ${fileCount} file(s)`;
+            exportBtn.textContent = "✅ Done";
+            setTimeout(hide, 1200);
+
+        } catch (e) {
+            status.style.color = "#f38ba8";
+            status.textContent = `❌ ${e.message}`;
+            exportBtn.disabled = false;
+            exportBtn.textContent = "📤 Export";
+        }
+    });
+
+    btnRow.append(exportBtn, cancelBtn);
+    grid.append(status, btnRow);
+    body.appendChild(grid);
+
+    backdrop.style.display = "block";
+    win.style.display = "flex";
+    win.style.left = "50%"; win.style.top = "120px"; win.style.transform = "translateX(-50%)";
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 //  TAG PICKER POPUP
 // ══════════════════════════════════════════════════════════════════════════════
 function openTagPicker({ title, key, onPick }) {
@@ -1285,6 +1478,10 @@ export class PromptPanel {
         this._toolbar.appendChild(mkBtn("📋 Presets", "#1f2040", C.text, () => {
             openPresetManager((pills, category) => this._smartInsertPills(pills, category));
         }));
+	    
+		this._toolbar.appendChild(mkBtn("📤 Export", "#1f2040", C.text, () => {
+            openExportDialog();
+        }));	
     }
 
     // ── Token counter ────────────────────────────────────────────────────────
