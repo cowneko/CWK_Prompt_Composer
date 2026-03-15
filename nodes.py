@@ -3,7 +3,6 @@ import os
 import re
 import torch
 import logging
-from contextlib import contextmanager
 
 import server
 from aiohttp import web
@@ -11,48 +10,278 @@ from comfy import model_management
 
 logger = logging.getLogger("[CWK_Prompt_Composer]")
 
-# ── Tag directory ─────────────────────────────────────────────────────────────
-TAG_DIR = os.path.join(os.path.dirname(__file__), "web", "tags")
+# ── Directories ───────────────────────────────────────────────────────────────
+NODE_ROOT    = os.path.dirname(__file__)
+TAG_DIR      = os.path.join(NODE_ROOT, "tags")
+WILDCARD_DIR = os.path.join(NODE_ROOT, "wildcards")
+PRESET_DIR   = os.path.join(NODE_ROOT, "presets")
+
+os.makedirs(TAG_DIR, exist_ok=True)
+os.makedirs(WILDCARD_DIR, exist_ok=True)
+os.makedirs(PRESET_DIR, exist_ok=True)
+
+# ── Danbooru tags (auto-downloaded into main.txt) ─────────────────────────────
+DANBOORU_URL  = "https://gist.githubusercontent.com/pythongosssss/1d3efa6050356a08cea975183088159a/raw/a18fb2f94f9156cf4476b0c24a09544d6c0baec6/danbooru-tags.txt"
+MAIN_TAG_FILE = os.path.join(TAG_DIR, "main.txt")
+
+TAG_FILES = {
+    "quality":   os.path.join(TAG_DIR, "quality.txt"),
+    "style":     os.path.join(TAG_DIR, "style.txt"),
+    "aesthetic": os.path.join(TAG_DIR, "aesthetic.txt"),
+    "main":      MAIN_TAG_FILE,
+    "negative":  os.path.join(TAG_DIR, "negative.txt"),
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TAG ENDPOINTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@server.PromptServer.instance.routes.get("/cwk/tags/{key}")
+async def get_tags(request):
+    """Serve any tag file as plain text. Auto-downloads main.txt on first use."""
+    key = request.match_info["key"]
+    if key not in TAG_FILES:
+        return web.Response(text="", status=404)
+
+    filepath = TAG_FILES[key]
+
+    if key == "main" and not os.path.exists(filepath):
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.get(DANBOORU_URL) as resp:
+                    if resp.status == 200:
+                        raw = await resp.text()
+                        lines = []
+                        for line in raw.split("\n"):
+                            line = line.strip()
+                            if not line:
+                                continue
+                            comma_idx = line.rfind(",")
+                            if comma_idx != -1 and line[comma_idx + 1:].strip().isdigit():
+                                line = line[:comma_idx].strip()
+                            lines.append(line)
+                        with open(filepath, "w", encoding="utf-8") as f:
+                            f.write("\n".join(lines) + "\n")
+                        logger.info(f"[CWK] Downloaded and cleaned main.txt ({len(lines)} tags)")
+                    else:
+                        return web.Response(text="", status=resp.status)
+        except Exception as e:
+            logger.error(f"[CWK] Failed to download main.txt: {e}")
+            return web.Response(text="", status=500)
+
+    if not os.path.exists(filepath):
+        return web.Response(text="", status=404)
+
+    with open(filepath, "r", encoding="utf-8") as f:
+        text = f.read()
+    return web.Response(text=text, content_type="text/plain")
 
 
 @server.PromptServer.instance.routes.post("/cwk/add_tag")
 async def add_tag(request):
+    """Append a tag to one of the four .txt tag files."""
     try:
-        data        = await request.json()
-        panel_key   = data.get("panelKey")
-        category    = data.get("category")
-        subcategory = data.get("subcategory")
-        tag         = data.get("tag", "").strip()
+        data = await request.json()
+        key  = data.get("key", "").strip()
+        tag  = data.get("tag", "").strip().replace(" ", "_")
 
-        if not all([panel_key, category, subcategory, tag]):
-            return web.json_response({"ok": False, "error": "Missing fields"}, status=400)
+        if not key or not tag:
+            return web.json_response({"ok": False, "error": "Missing key or tag"}, status=400)
 
-        filepath = os.path.join(TAG_DIR, f"{panel_key}.json")
+        if key not in TAG_FILES:
+            return web.json_response({"ok": False, "error": f"Unknown tag file: {key}"}, status=404)
+
+        filepath = TAG_FILES[key]
+
         if not os.path.exists(filepath):
-            return web.json_response({"ok": False, "error": f"File not found: {panel_key}.json"}, status=404)
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write("")
 
         with open(filepath, "r", encoding="utf-8") as f:
-            tag_data = json.load(f)
+            existing = set(line.strip() for line in f if line.strip())
 
-        for group in tag_data:
-            if group.get("category") == category:
-                for sub in group.get("subcategories", []):
-                    if sub.get("name") == subcategory:
-                        if tag in sub["tags"]:
-                            return web.json_response({
-                                "ok": False,
-                                "duplicate": True,
-                                "where": f"{category} › {subcategory}"
-                            })
-                        sub["tags"].append(tag)
-                        sub["tags"].sort()
-                        with open(filepath, "w", encoding="utf-8") as f:
-                            json.dump(tag_data, f, indent=2, ensure_ascii=False)
-                        return web.json_response({"ok": True})
+        if tag in existing:
+            return web.json_response({"ok": False, "duplicate": True, "tag": tag})
 
-        return web.json_response(
-            {"ok": False, "error": "Category or subcategory not found"}, status=404
-        )
+        with open(filepath, "a", encoding="utf-8") as f:
+            f.write(tag + "\n")
+
+        return web.json_response({"ok": True, "tag": tag, "key": key})
+
+    except Exception as e:
+        return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  EMBEDDING ENDPOINT
+# ══════════════════════════════════════════════════════════════════════════════
+
+@server.PromptServer.instance.routes.get("/cwk/embeddings")
+async def get_embeddings(request):
+    """List available embedding names for autocomplete (recursive)."""
+    import folder_paths
+    embeddings = []
+    try:
+        emb_dirs = folder_paths.get_folder_paths("embeddings")
+        for base_dir in emb_dirs:
+            if not os.path.isdir(base_dir):
+                continue
+            for root, _dirs, files in os.walk(base_dir):
+                for f in files:
+                    name, ext = os.path.splitext(f)
+                    if ext.lower() in (".pt", ".safetensors", ".bin"):
+                        rel = os.path.relpath(os.path.join(root, f), base_dir)
+                        rel_no_ext = os.path.splitext(rel)[0]
+                        rel_no_ext = rel_no_ext.replace(os.sep, "/")
+                        embeddings.append(rel_no_ext)
+    except Exception as e:
+        logger.warning(f"[CWK] Could not list embeddings: {e}")
+    return web.json_response(sorted(set(embeddings)))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  WILDCARD ENDPOINTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@server.PromptServer.instance.routes.get("/cwk/wildcards")
+async def list_wildcards(request):
+    """List all .yaml/.yml files in the wildcards/ folder (recursive)."""
+    files = []
+    try:
+        for root, _dirs, filenames in os.walk(WILDCARD_DIR):
+            for f in filenames:
+                if f.lower().endswith((".yaml", ".yml")):
+                    rel = os.path.relpath(os.path.join(root, f), WILDCARD_DIR)
+                    rel = rel.replace(os.sep, "/")
+                    files.append(rel)
+    except Exception as e:
+        logger.warning(f"[CWK] Could not list wildcards: {e}")
+    return web.json_response(sorted(files))
+
+
+@server.PromptServer.instance.routes.get("/cwk/wildcards/{filename:.+}")
+async def get_wildcard(request):
+    """Serve a specific wildcard file as raw YAML text."""
+    filename = request.match_info["filename"]
+    safe_path = os.path.normpath(filename)
+    if safe_path.startswith("..") or os.path.isabs(safe_path):
+        return web.Response(text="Invalid path", status=400)
+
+    filepath = os.path.join(WILDCARD_DIR, safe_path)
+    if not os.path.exists(filepath):
+        return web.Response(text="", status=404)
+    if not filepath.lower().endswith((".yaml", ".yml")):
+        return web.Response(text="Not a YAML file", status=400)
+
+    with open(filepath, "r", encoding="utf-8") as f:
+        text = f.read()
+    return web.Response(text=text, content_type="text/plain")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  PRESET ENDPOINTS  — stored as individual .json files in presets/
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _safe_preset_name(name):
+    """Sanitize preset name for use as filename."""
+    # Replace problematic chars with underscores, keep it reasonable
+    safe = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', name.strip())
+    safe = safe.strip('. ')
+    if not safe:
+        safe = "unnamed"
+    return safe
+
+
+@server.PromptServer.instance.routes.get("/cwk/presets")
+async def list_presets(request):
+    """List all saved presets. Returns { name: { category, pills } }."""
+    presets = {}
+    try:
+        for f in os.listdir(PRESET_DIR):
+            if not f.lower().endswith(".json"):
+                continue
+            filepath = os.path.join(PRESET_DIR, f)
+            try:
+                with open(filepath, "r", encoding="utf-8") as fh:
+                    data = json.load(fh)
+                name = data.get("name", os.path.splitext(f)[0])
+                presets[name] = {
+                    "category": data.get("category", "main"),
+                    "pills":    data.get("pills", []),
+                }
+            except Exception as e:
+                logger.warning(f"[CWK] Could not read preset {f}: {e}")
+    except Exception as e:
+        logger.warning(f"[CWK] Could not list presets: {e}")
+    return web.json_response(presets)
+
+
+@server.PromptServer.instance.routes.post("/cwk/presets")
+async def save_preset(request):
+    """Save a preset. Body: { name, category, pills: [{text, weight}] }."""
+    try:
+        data = await request.json()
+        name     = data.get("name", "").strip()
+        category = data.get("category", "main")
+        pills    = data.get("pills", [])
+
+        if not name:
+            return web.json_response({"ok": False, "error": "Missing name"}, status=400)
+
+        safe_name = _safe_preset_name(name)
+        filepath  = os.path.join(PRESET_DIR, f"{safe_name}.json")
+
+        # Check for duplicates by name (not just filename)
+        for f in os.listdir(PRESET_DIR):
+            if not f.lower().endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(PRESET_DIR, f), "r", encoding="utf-8") as fh:
+                    existing = json.load(fh)
+                if existing.get("name") == name:
+                    return web.json_response({"ok": False, "duplicate": True, "name": name})
+            except Exception:
+                pass
+
+        preset_data = {
+            "name":     name,
+            "category": category,
+            "pills":    pills,
+        }
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(preset_data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"[CWK] Saved preset: {name} → {filepath}")
+        return web.json_response({"ok": True, "name": name})
+
+    except Exception as e:
+        return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+
+@server.PromptServer.instance.routes.delete("/cwk/presets/{name}")
+async def delete_preset(request):
+    """Delete a preset by name."""
+    target_name = request.match_info["name"]
+
+    try:
+        for f in os.listdir(PRESET_DIR):
+            if not f.lower().endswith(".json"):
+                continue
+            filepath = os.path.join(PRESET_DIR, f)
+            try:
+                with open(filepath, "r", encoding="utf-8") as fh:
+                    data = json.load(fh)
+                if data.get("name") == target_name:
+                    os.remove(filepath)
+                    logger.info(f"[CWK] Deleted preset: {target_name}")
+                    return web.json_response({"ok": True})
+            except Exception:
+                pass
+
+        return web.json_response({"ok": False, "error": "Preset not found"}, status=404)
 
     except Exception as e:
         return web.json_response({"ok": False, "error": str(e)}, status=500)
@@ -60,9 +289,7 @@ async def add_tag(request):
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  A1111-STYLE CLIP ENCODING — SELF-CONTAINED
-# ═══════════════════════════════════���══════════════════════════════════════════
-
-# ── A1111 attention parser ────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
 
 _re_attention = re.compile(r"""
 \\\(|
@@ -136,18 +363,10 @@ def parse_prompt_attention(text):
     return res
 
 
-# ── Tokenizer/encoder discovery ───────────────────────────────────────────────
-
 CHUNK_LENGTH = 75
 
 
 def _get_tokenizer_info(clip):
-    """
-    Discover inner tokenizer(s) and dict keys.
-    Returns dict of {key: SDTokenizer}.
-      SD1.5:  {"l": <SDTokenizer>}
-      SDXL:   {"g": <SDXLClipGTokenizer>, "l": <SDTokenizer>}
-    """
     tokenizer_wrapper = clip.tokenizer
     result = {}
     try:
@@ -175,12 +394,6 @@ def _get_tokenizer_info(clip):
 
 
 def _get_encoder_info(clip):
-    """
-    Discover inner encoder(s).
-    Returns dict of {key: SDClipModel}.
-      SD1.5:  {"l": <SDClipModel>}
-      SDXL:   {"g": <SDXLClipG>, "l": <SDClipModel>}
-    """
     encoder_wrapper = clip.cond_stage_model
     result = {}
 
@@ -195,12 +408,7 @@ def _get_encoder_info(clip):
     return result
 
 
-# ── A1111 tokenize ────────────────────────────────────────────────────────────
-
 def _a1111_tokenize(inner_tokenizer, text):
-    """
-    Returns: list of (tokens_77, weights_77)
-    """
     parsed = parse_prompt_attention(text)
 
     hf_tokenizer = inner_tokenizer.tokenizer
@@ -274,36 +482,14 @@ def _a1111_tokenize(inner_tokenizer, text):
     return chunks
 
 
-# ── A1111-style encode — direct transformer call ─────────────────────────────
-#
-# The key difference from the previous approach:
-# Instead of calling clip.encode_from_tokens() which uses ComfyUI's
-# ClipTokenWeightEncoder (weight formula: (z-z_empty)*w + z_empty),
-# we call the encoder's .encode() method DIRECTLY, then apply
-# A1111 emphasis (z * w, mean-normalized) ourselves.
-#
-# This matches exactly what smZ's ClassicTextProcessingEngine does:
-#   1. encode_with_transformers(tokens)  → raw z, pooled
-#   2. z = z * multipliers              → per-token scaling
-#   3. z = z * (original_mean/new_mean) → mean normalization
-
-
 def _encode_single_clip_a1111(encoder, chunks, pad_token):
-    """
-    Encode chunks through a single CLIP encoder with A1111 emphasis.
-    encoder: an SDClipModel instance (has .encode() and .special_tokens)
-    chunks: list of (tokens_77, weights_77)
-    Returns: (cond_tensor, pooled_tensor)
-    """
     target_device = model_management.intermediate_device()
     zs = []
     first_pooled = None
 
     for tokens_77, weights_77 in chunks:
-        # Build token tensor [1, 77]
         tokens_tensor = [tokens_77]
 
-        # Replace pad tokens after first end_token if pad != end
         end_token = encoder.special_tokens.get("end", tokens_77[-1])
         pt = encoder.special_tokens.get("pad", end_token)
         if pt != end_token:
@@ -316,16 +502,13 @@ def _encode_single_clip_a1111(encoder, chunks, pad_token):
             except ValueError:
                 pass
 
-        # Call encoder.encode() directly — this runs the transformer
-        # and returns (output_tensor, pooled) without any weight application
         o = encoder.encode(tokens_tensor)
-        z = o[0]        # shape: [1, 77, embed_dim]
+        z = o[0]
         pooled = o[1] if len(o) > 1 else None
 
         if first_pooled is None and pooled is not None:
             first_pooled = pooled[0:1].to(target_device)
 
-        # Apply A1111 emphasis: multiply per-token, mean-normalize
         weights_tensor = torch.tensor(
             [weights_77], dtype=z.dtype, device=z.device
         )
@@ -346,13 +529,6 @@ def _encode_single_clip_a1111(encoder, chunks, pad_token):
 
 
 def _encode_a1111(clip, text):
-    """
-    Full A1111-style encode:
-    1) Parse with A1111 attention parser
-    2) Tokenize into 75-token chunks with per-token weights
-    3) Encode tokens directly through each CLIP transformer
-    4) Apply per-token emphasis with mean normalization
-    """
     tokenizer_map = _get_tokenizer_info(clip)
     encoder_map   = _get_encoder_info(clip)
 
@@ -360,21 +536,17 @@ def _encode_a1111(clip, text):
         logger.warning("[CWK] Could not discover CLIP internals, falling back to comfy")
         return _encode_comfy(clip, text)
 
-    # Ensure the model is loaded
     clip.load_model()
 
-    # Set clip options (layer, device)
     clip.cond_stage_model.reset_clip_options()
     if clip.layer_idx is not None:
         clip.cond_stage_model.set_clip_options({"layer": clip.layer_idx})
     clip.cond_stage_model.set_clip_options({"execution_device": clip.patcher.load_device})
 
-    # Tokenize with A1111 parser for each sub-tokenizer
     all_chunks = {}
     for key, inner_tok in tokenizer_map.items():
         all_chunks[key] = _a1111_tokenize(inner_tok, text)
 
-    # Encode each sub-model
     results = {}
     for key in sorted(encoder_map.keys()):
         if key not in all_chunks:
@@ -388,22 +560,19 @@ def _encode_a1111(clip, text):
     if not results:
         return _encode_comfy(clip, text)
 
-    # Combine: SD1.5 = just "l", SDXL = concat [l, g] along embed_dim
     if len(results) == 1:
         key = list(results.keys())[0]
         final_cond, pooled = results[key]
     else:
-        # SDXL: l_out and g_out concatenated, pooled from g
         l_cond, l_pooled = results.get("l", (None, None))
         g_cond, g_pooled = results.get("g", (None, None))
 
         if l_cond is None or g_cond is None:
             return _encode_comfy(clip, text)
 
-        # Cut to same sequence length (should already match)
         cut_to = min(l_cond.shape[1], g_cond.shape[1])
         final_cond = torch.cat([l_cond[:, :cut_to], g_cond[:, :cut_to]], dim=-1)
-        pooled = g_pooled  # SDXL uses clip_g pooled
+        pooled = g_pooled
 
     out_dict = {}
     if pooled is not None:
@@ -411,8 +580,6 @@ def _encode_a1111(clip, text):
 
     return [[final_cond, out_dict]]
 
-
-# ── Default comfy encode ──────────────────────────────────────────────────────
 
 def _encode_comfy(clip, text):
     tokens = clip.tokenize(text)
@@ -437,9 +604,7 @@ class CWKPromptComposerNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "quality_prompt":   ("STRING", {"default": "", "multiline": True}),
-                "main_prompt":      ("STRING", {"default": "", "multiline": True}),
-                "aesthetic_prompt": ("STRING", {"default": "", "multiline": True}),
+                "positive_prompt":  ("STRING", {"default": "", "multiline": True}),
                 "negative_prompt":  ("STRING", {"default": "", "multiline": True}),
             },
             "optional": {
@@ -453,9 +618,9 @@ class CWKPromptComposerNode:
     FUNCTION     = "compose"
     CATEGORY     = "CWK"
 
-    def compose(self, quality_prompt, main_prompt, aesthetic_prompt, negative_prompt,
+    def compose(self, positive_prompt, negative_prompt,
                 clip=None, parser="comfy"):
-        positive = ", ".join(p for p in [quality_prompt, main_prompt, aesthetic_prompt] if p.strip())
+        positive = positive_prompt.strip()
         negative = negative_prompt.strip()
 
         if clip is None:

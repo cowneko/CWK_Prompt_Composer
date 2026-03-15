@@ -24,13 +24,9 @@ export function makeWindow({ title, width = "500px", height = "500px", minWidth 
         borderBottom: "1px solid #313552", display: "flex", alignItems: "center",
         padding: "0 12px", userSelect: "none", borderRadius: "10px 10px 0 0", gap: "6px",
     });
-    ["#f38ba8","#f9e2af","#a6e3a1"].forEach(c => {
-        const dot = document.createElement("div");
-        Object.assign(dot.style, { width: "10px", height: "10px", borderRadius: "50%", background: c, flexShrink: "0" });
-        titleBar.appendChild(dot);
-    });
+
     const titleLabel = document.createElement("span");
-    Object.assign(titleLabel.style, { color: "#cdd6f4", fontSize: "13px", fontWeight: "bold", marginLeft: "4px", flex: "1", fontFamily: "Inter, system-ui, sans-serif" });
+    Object.assign(titleLabel.style, { color: "#cdd6f4", fontSize: "13px", fontWeight: "bold", flex: "1", fontFamily: "Inter, system-ui, sans-serif" });
     titleLabel.textContent = title;
     titleBar.appendChild(titleLabel);
 

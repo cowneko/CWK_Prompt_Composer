@@ -1,9 +1,12 @@
 // ── Category → color map ─────────────────────────────────────────────────────
 export const CATEGORY_COLORS = {
     quality:   "#f9e2af",
+	style:     "#a6e3a1",
     aesthetic: "#cba6f7",
     main:      "#89dceb",
     negative:  "#fab387",
+    embedding: "#a6e3a1",
+    wildcard:  "#94e2d5",
     custom:    "#cdd6f4",
 };
 
@@ -21,21 +24,19 @@ export class PillCanvas {
     constructor(onChange) {
         this.pills          = [];
         this.selected       = new Set();
-        this.onChange       = onChange;
-        this._dragIdx       = null;
-        this._dragOver      = null;
-        this._weightPopover = null;
-        this._ctxMenu       = null;
-        this._undoStack     = [];
-        this._redoStack     = [];
+        this.onChange        = onChange;
+        this._dragIdx        = null;
+        this._dragOver       = null;
+        this._weightPopover  = null;
+        this._ctxMenu        = null;
+        this._undoStack      = [];
+        this._redoStack      = [];
 
-        // callbacks set by PanelDialog
-        this.onAddToList    = null;   // (tag) => void
+        this.onAddToList     = null;
 
         this.el = document.createElement("div");
         Object.assign(this.el.style, {
             minHeight:    "80px",
-            maxHeight:    "160px",
             overflowY:    "auto",
             background:   "#141824",
             border:       "1px solid #313552",
@@ -145,19 +146,21 @@ export class PillCanvas {
         }).join(", ");
     }
 
-    setValue(str) {
+    setValue(str, classifyFn = null) {
         this._undoStack = []; this._redoStack = [];
         this.pills = str
             ? str.split(/,\s*/).filter(Boolean).map(token => {
                 const weighted = token.match(/^\((.+):(\d+(?:\.\d+)?)\)$/);
-                if (weighted) return { id: this._nextId(), text: weighted[1], category: "custom", weight: parseFloat(weighted[2]) };
-                return { id: this._nextId(), text: token.trim(), category: "custom", weight: 1.0 };
+                const text     = weighted ? weighted[1] : token.trim();
+                const weight   = weighted ? parseFloat(weighted[2]) : 1.0;
+                const category = classifyFn ? classifyFn(text) : "custom";
+                return { id: this._nextId(), text, category, weight };
             })
             : [];
         this.selected.clear(); this._closePopover(); this._closeCtxMenu(); this._render();
     }
 
-    // ── Context menu ───────────────────────────────────────────────────────
+    // ── Context menu ──────────────────────────────────────────��────────────
     _closeCtxMenu() {
         if (this._ctxMenu) { this._ctxMenu.remove(); this._ctxMenu = null; }
     }
@@ -169,37 +172,22 @@ export class PillCanvas {
         const menu = document.createElement("div");
         this._ctxMenu = menu;
         Object.assign(menu.style, {
-            position:      "fixed",
-            zIndex:        "99999",
-            background:    "#1e2335",
-            border:        "1px solid #313552",
-            borderRadius:  "8px",
-            padding:       "4px",
-            boxShadow:     "0 4px 20px rgba(0,0,0,0.6)",
-            display:       "flex",
-            flexDirection: "column",
-            gap:           "2px",
-            minWidth:      "180px",
+            position: "fixed", zIndex: "99999", background: "#1e2335",
+            border: "1px solid #313552", borderRadius: "8px", padding: "4px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.6)", display: "flex",
+            flexDirection: "column", gap: "2px", minWidth: "180px",
         });
 
         const mkItem = (icon, label, onClick) => {
             const item = document.createElement("div");
             Object.assign(item.style, {
-                display:      "flex",
-                alignItems:   "center",
-                gap:          "8px",
-                padding:      "7px 10px",
-                borderRadius: "5px",
-                cursor:       "pointer",
-                fontSize:     "12px",
-                color:        "#cdd6f4",
-                userSelect:   "none",
-                fontFamily:   "Inter, system-ui, sans-serif",
+                display: "flex", alignItems: "center", gap: "8px",
+                padding: "7px 10px", borderRadius: "5px", cursor: "pointer",
+                fontSize: "12px", color: "#cdd6f4", userSelect: "none",
+                fontFamily: "Inter, system-ui, sans-serif",
             });
-            const iconEl = document.createElement("span");
-            iconEl.textContent = icon;
-            const labelEl = document.createElement("span");
-            labelEl.textContent = label;
+            const iconEl = document.createElement("span"); iconEl.textContent = icon;
+            const labelEl = document.createElement("span"); labelEl.textContent = label;
             item.append(iconEl, labelEl);
             item.addEventListener("mouseenter", () => item.style.background = "#2a2f45");
             item.addEventListener("mouseleave", () => item.style.background = "transparent");
@@ -207,40 +195,31 @@ export class PillCanvas {
             return item;
         };
 
-        // divider
         const divider = document.createElement("hr");
         Object.assign(divider.style, { border: "none", borderTop: "1px solid #313552", margin: "2px 0" });
 
-        // pill name header
         const header = document.createElement("div");
         header.textContent = pill.text;
         Object.assign(header.style, {
-            padding:      "5px 10px 3px",
-            fontSize:     "11px",
-            color:        "#6c7086",
-            fontStyle:    "italic",
-            userSelect:   "none",
-            overflow:     "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace:   "nowrap",
+            padding: "5px 10px 3px", fontSize: "11px", color: "#6c7086",
+            fontStyle: "italic", userSelect: "none", overflow: "hidden",
+            textOverflow: "ellipsis", whiteSpace: "nowrap",
         });
 
         menu.appendChild(header);
         menu.appendChild(divider.cloneNode());
-
         menu.appendChild(mkItem("⚖", "Set Weight", () => this._openWeightPopover(pill, pillEl)));
 
-        if (this.onAddToList) {
-            menu.appendChild(mkItem("📌", "Add to Tag List", () => this.onAddToList(pill.text)));
+        if (this.onEnhanceCtxMenu) {
+            this.onEnhanceCtxMenu(menu, pill, divider);
         }
 
         document.body.appendChild(menu);
 
-        // position near cursor
         const mw = 180;
         let left = e.clientX + 4, top = e.clientY + 4;
-        if (left + mw       > window.innerWidth  - 8) left = e.clientX - mw - 4;
-        if (top  + 120      > window.innerHeight - 8) top  = e.clientY - 120;
+        if (left + mw > window.innerWidth - 8) left = e.clientX - mw - 4;
+        if (top + 120 > window.innerHeight - 8) top = e.clientY - 120;
         menu.style.left = left + "px";
         menu.style.top  = top  + "px";
     }
@@ -313,7 +292,7 @@ export class PillCanvas {
         if (this.pills.length === 0) {
             const placeholder = document.createElement("span");
             Object.assign(placeholder.style, { color: "#313552", fontSize: "12px", padding: "4px" });
-            placeholder.textContent = "Click tags below to add them here…";
+            placeholder.textContent = "No tags yet — switch to text mode to add some…";
             this.el.appendChild(placeholder);
             return;
         }
@@ -322,6 +301,8 @@ export class PillCanvas {
             const selected  = this.selected.has(pill.id);
             const color     = categoryColor(pill.category);
             const hasWeight = Math.round(pill.weight * 10) / 10 !== 1.0;
+            const isEmbed   = pill.text.startsWith("embedding:");
+            const isWild    = pill.text.startsWith("__") && pill.text.endsWith("__");
 
             const pillEl = document.createElement("div");
             pillEl.draggable = true;
@@ -329,21 +310,28 @@ export class PillCanvas {
                 display: "inline-flex", alignItems: "center", gap: "4px",
                 padding: "3px 8px", borderRadius: "12px",
                 background: selected ? `${color}22` : "#1e2335",
-                border:     `1px solid ${selected ? color : color + "88"}`,
-                cursor:     "grab", fontSize: "12px",
-                color:      selected ? color : color + "cc",
+                border: `1px ${isWild ? "dashed" : "solid"} ${selected ? color : color + "88"}`,
+                cursor: "grab", fontSize: "12px",
+                color: selected ? color : color + "cc",
                 userSelect: "none", transition: "all 0.1s",
             });
 
+            if (isEmbed) {
+                const badge = document.createElement("span");
+                badge.textContent = "E";
+                Object.assign(badge.style, { fontSize: "8px", background: "#a6e3a133", color: "#a6e3a1", borderRadius: "3px", padding: "0 3px", fontWeight: "bold" });
+                pillEl.appendChild(badge);
+            }
+
             const labelEl = document.createElement("span");
-            labelEl.textContent = pill.text;
+            labelEl.textContent = isEmbed ? pill.text.replace("embedding:", "") : pill.text;
             labelEl.addEventListener("click", (e) => { e.stopPropagation(); this.toggleSelect(pill.id); });
 
             if (hasWeight) {
-                const badge = document.createElement("span");
-                badge.textContent = pill.weight.toFixed(1);
-                Object.assign(badge.style, { fontSize: "9px", background: "#1a1f2e", color: "#89b4fa", borderRadius: "4px", padding: "1px 3px", fontWeight: "bold", lineHeight: "1.2" });
-                pillEl.appendChild(badge);
+                const wBadge = document.createElement("span");
+                wBadge.textContent = pill.weight.toFixed(1);
+                Object.assign(wBadge.style, { fontSize: "9px", background: "#1a1f2e", color: "#89b4fa", borderRadius: "4px", padding: "1px 3px", fontWeight: "bold", lineHeight: "1.2" });
+                pillEl.appendChild(wBadge);
             }
 
             const xBtn = document.createElement("span");
@@ -353,7 +341,6 @@ export class PillCanvas {
 
             pillEl.append(labelEl, xBtn);
 
-            // right-click → context menu
             pillEl.addEventListener("contextmenu", (e) => {
                 e.preventDefault(); e.stopPropagation();
                 this._openCtxMenu(pill, pillEl, e);

@@ -31,3 +31,9 @@ desktop.ini
 
 # Node / npm (if ever used)
 node_modules/
+
+# Auto-downloaded tag files
+tags/main.txt
+
+# User data (presets are individual .json files, keep the folder)
+# presets/*.json

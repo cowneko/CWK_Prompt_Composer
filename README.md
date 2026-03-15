@@ -1,31 +1,31 @@
 # CWK Prompt Composer
 
-A custom node for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that lets you compose positive and negative prompts using a visual **pill-based editor** with tag browsing, presets, drag-to-reorder, weight control, a lucky prompt generator, manual override mode, wildcard file support, and **built-in CLIP encoding with A1111-compatible prompt parsing**.
+A custom node for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that lets you compose positive and negative prompts using a visual **pill-based editor** with inline autocomplete, colored syntax highlighting, tag pickers, server-backed presets, wildcard file support, and **built-in CLIP encoding with A1111-compatible prompt parsing**.
 
 ---
 
 ## ✨ Features
 
-- **4 prompt panels** — Quality, Main, Aesthetic, and Negative prompts, each with their own curated tag library
-- **Pill canvas** — Each tag is a draggable, reorderable pill; click to select, drag to rearrange
-- **Weight control** — Right-click any pill to set its emphasis weight (e.g. `(tag:1.3)`)
-- **Tag browser** — Browse tags organised by category and subcategory with a live filter
-  - Flat 2-level browser for Quality / Aesthetic / Negative panels
-  - 3-level nested browser for the Main panel
-- **Free-type input** — Type any custom tag and press Enter to add it instantly
+- **Dual prompt panels** — Positive and Negative prompts, each with a text editor and pill-based tag editor mode
+- **Inline autocomplete** — Start typing in text mode and get suggestions from all tag categories + embeddings, with color-coded results by category
+- **Colored syntax highlighting** — Tags are colored by category (quality, style, aesthetic, main, negative, wildcard, embedding, custom) in real-time as you type
+- **Pill canvas** — Switch to tag mode for a draggable, reorderable pill view; click to select, drag to rearrange
+- **Weight control** — Right-click any pill to set its emphasis weight (e.g. `(tag:1.3)`); use `Ctrl+Up/Down` in text mode to adjust weight at caret; select multiple tags and `Ctrl+Up/Down` to adjust all at once
+- **Tag pickers** — Browse Quality, Style, Aesthetic, and Negative tags via popup pickers with live search filtering
+- **Smart insertion** — Tags are inserted at category-aware positions: quality → style → main → custom/wildcard → aesthetic → negative
 - **Join / Split** — Merge selected pills with `_` or split underscore-joined pills apart
-- **Undo / Redo** — Full history (Ctrl+Z / Ctrl+Shift+Z or Ctrl+Y)
-- **Presets** — Save, load, rename, export (JSON) and import presets per panel
-- **🎲 I Feel Lucky** — Generate a random coherent prompt from subject / clothing / expression / action / environment pools
-- **🔞 NSFW toggle** — Opt-in to include adult content in the Lucky generator
-- **📌 Add to Tag List** — Pin any custom or free-typed tag back into the persistent JSON tag library
-- **✏️ Manual override mode** — Switch the node to Manual tab to type or paste a full prompt directly, overriding the composer output independently for positive and negative
-- **📂 Wildcard loader** — Load any `.yaml` wildcard file, browse its keys/categories, and insert entries as pills (single pick or random roll)
+- **Move selected** — Move selected pills left/right with toolbar buttons
+- **Undo / Redo** — Full history in pill mode
+- **Server-backed presets** — Save, load, delete, export (JSON) and import presets stored as individual `.json` files in the `presets/` folder
+- **Tabbed preset manager** — Presets organized by category (Quality, Style, Main, Aesthetic, Negative) with expandable tag previews
+- **📂 Wildcard loader** — Browse `.yaml` wildcard files from the `wildcards/` folder, select categories/keys, pick entries or roll random — with file caching and last-selection memory
+- **📌 Add to Tags** — Right-click any tag (in text mode or pill mode) and choose **Add to Tag List** with a category submenu to save it to the correct `.txt` file
+- **Underscore ↔ Space toggle** — Right-click any tag to switch between underscores and spaces
+- **Token counter** — Each panel header displays a live token count with chunk indicator when exceeding 75 tokens
 - **🔌 Built-in CLIP encoding** — Optional `CLIP` input with `positive_cond` and `negative_cond` conditioning outputs — no separate CLIP Text Encode node needed
-- **🔤 A1111 prompt parser** — Selectable `parser` option (`comfy` / `A1111`) for Automatic1111-compatible prompt weighting with per-token emphasis and mean normalization — produces identical results to smZ's CLIP Text Encode++ with zero external dependencies
-- **Live preview** — The node canvas shows live previews of the assembled positive and negative prompts, with the negative preview at half the height of the positive
-- **Resizable preview** — Both preview boxes scale proportionally (2:1 ratio) when you resize the node
-- **Keyboard shortcuts** — `Esc` to cancel, `Ctrl+Enter` to confirm, `Ctrl+Z/Y` for undo/redo
+- **🔤 A1111 prompt parser** — Selectable `parser` option (`comfy` / `A1111`) for Automatic1111-compatible prompt weighting with per-token emphasis and mean normalization
+- **Embedding support** — Recursive scanning of all embedding folders; embeddings appear in autocomplete as `embedding:name`
+- **Keyboard shortcuts** — Arrow keys + Tab/Enter for autocomplete navigation, Escape to dismiss, Ctrl+Up/Down to adjust tag weight
 
 ---
 
@@ -48,21 +48,24 @@ Then restart ComfyUI.
 ```
 CWK_Prompt_Composer/
 ├── __init__.py              ← Node registration + web directory
-├── nodes.py                 ← Python node, CLIP encoding, A1111 parser, /cwk/add_tag API
+├── nodes.py                 ← Python node, CLIP encoding, A1111 parser, API endpoints
+├── tags/                    ← Tag libraries (plain text, one tag per line)
+│   ├── quality.txt
+│   ├── style.txt            ← NEW: style/medium tags
+│   ├── aesthetic.txt
+│   ├── main.txt             ← Auto-downloaded from danbooru on first use
+│   └── negative.txt
+├── wildcards/               ← Place .yaml wildcard files here
+│   └── example_poses.yaml
+├── presets/                  ← Server-backed preset storage (individual .json files)
 └── web/
-    ├── index.js             ← Extension entry, node draw & state
+    ├── index.js             ← Extension entry, DOM widget, node state & serialization
+    ├── prompt_panel.js      ← PromptPanel: text/pill modes, autocomplete, presets, tag pickers
     ├── pill_canvas.js       ← PillCanvas widget + category colours
-    ├── tag_browser.js       ← Flat & 3-level nested tag browsers
-    ├── panel_dialog.js      ← Panel dialog, Lucky generator, NSFW toggle, Wildcard button
-    ├── preset_manager.js    ← Preset manager, window builder, storage helpers
-    ├── tag_editor.js        ← Add-to-Tag-List panel
-    ├── wildcard_loader.js   ← Wildcard .yaml file loader & picker
-    └── tags/
-        ├── quality.json     ← Quality prompt tags
-        ├── aesthetic.json   ← Aesthetic / style tags
-        ├── main.json        ← Main subject / clothing / action / environment tags
-        ├── negative.json    ← Negative prompt tags
-        └── lucky.json       ← Lucky prompt pools (SFW + NSFW)
+    ├── preset_manager.js    ← makeWindow helper, PresetManager class
+    ├── tag_editor.js        ← Add-to-Tag-List dialog
+    ├── wildcard_loader.js   ← Wildcard .yaml file loader & picker (server-backed)
+    └── autocomplete.js      ← Autocomplete engine (unified tag index)
 ```
 
 ---
@@ -72,18 +75,18 @@ CWK_Prompt_Composer/
 1. Add the **CWK Prompt Composer** node to your workflow.
 2. Connect a **CLIP** model to the optional `clip` input (to get conditioning outputs directly).
 3. Choose a **parser** (`comfy` or `A1111`) from the dropdown on the node.
-4. Click any of the four buttons on the node (⭐ Quality, 🖼️ Main, 🎨 Aesthetic, ❌ Negative) to open its panel.
-5. Browse or filter tags in the bottom browser and click to add them as pills.
-6. Type a custom tag in the input bar and press **Enter**.
-7. Drag pills to reorder. Right-click a pill to set its weight or add it to the tag library.
-8. Click **✅ Confirm** — the assembled prompt string is written back to the node widget.
+4. **Text mode** (default) — Type directly in the editor. Autocomplete appears after 2 characters. Tags are syntax-highlighted by category. Use `Ctrl+Up/Down` to adjust weight of the tag at the caret (or of a multi-tag selection).
+5. **Tag mode** — Click **🏷 Edit Tags** to switch to the pill canvas. Drag to reorder, right-click for weight/context menu.
+6. Use the header buttons (⭐ Quality, 🎭 Style, 🎨 Aesthetic, ❌ Negative, 📂 Wildcards) to open tag pickers.
+7. In pill mode, use the toolbar for Join, Split, Move, Undo/Redo, Clear, Save Preset, and Presets.
+8. Right-click any tag (in either mode) to access **Add to Tag List** (with category chooser), **Underscore ↔ Space toggle**, **Save as Preset**, and **Load Preset**.
 
 ### Outputs
 
 | Output | Type | Description |
 |---|---|---|
-| `positive_prompt` | STRING | Quality + Main + Aesthetic joined with `, ` |
-| `negative_prompt` | STRING | Negative prompt string |
+| `positive_prompt` | STRING | Assembled positive prompt string |
+| `negative_prompt` | STRING | Assembled negative prompt string |
 | `positive_cond` | CONDITIONING | Encoded positive conditioning (requires CLIP input) |
 | `negative_cond` | CONDITIONING | Encoded negative conditioning (requires CLIP input) |
 
@@ -96,46 +99,45 @@ CWK_Prompt_Composer/
 
 > **Note:** The A1111 parser is fully self-contained. It does **not** require ComfyUI_smZNodes to be installed.
 
-### 🎨 Composer mode (default)
-The node assembles your pills from each panel into the final prompts automatically. The live preview on the node shows the current positive (large box) and negative (smaller box, half height) prompts.
-
-### ✏️ Manual override mode
-Click the **✏️ Manual** tab on the node to switch to manual mode. Click either preview box to open a text editor where you can type or paste a full prompt directly. This overrides the composer output for that slot. Click **🗑 Clear Override** to revert back to the composer value. A `●` dot on the Manual tab indicates an active override.
-
 ### 📂 Wildcard loader
-Inside any panel, click **📂 Wildcards** in the toolbar. Browse to a `.yaml` wildcard file on your machine, select a key/category, then either click an individual entry or click **🎲 Insert Random Entry** to add a random pick as a pill.
+Click **📂 Wildcards** in any panel header. Select a wildcard file from the dropdown (loaded from the `wildcards/` folder), choose a category/key, then click an entry to insert it or use **🎲 Insert Random Entry**. The loader remembers your last selected file and category.
 
-### Keyboard shortcuts (inside a panel)
-| Shortcut | Action |
-|---|---|
-| `Ctrl + Enter` | Confirm |
-| `Escape` | Cancel |
-| `Ctrl + Z` | Undo |
-| `Ctrl + Shift + Z` / `Ctrl + Y` | Redo |
+### 📋 Presets
+- **💾 Save Preset** — Save current pills (or selected pills) with a name and category. Stored as individual `.json` files in the `presets/` folder.
+- **📋 Presets** — Open the tabbed preset manager to browse, load, delete, export all, or import from JSON files.
 
----
-
-## 🎨 Tag Categories
-
-| Panel | Categories |
-|---|---|
-| **Quality** | Resolution, Detail, Rendering, Award Winning |
-| **Aesthetic** | Framing, Art Style, Era, Mood, Color Palette, Lighting |
-| **Main** | Characters, Clothing, Action, Environment, NSFW |
-| **Negative** | Quality Issues, Anatomy, Faces, Hands, Composition |
+### 📌 Adding Tags Permanently
+Right-click any tag in text mode or pill mode and select **📌 Add to Tag List**. A category submenu lets you choose which `.txt` file (Quality, Style, Main, Aesthetic, Negative) the tag should be saved to. Spaces are automatically converted to underscores.
 
 ---
 
-## 🔧 Adding Tags Permanently
+## 🎨 Tag Categories & Colors
 
-Right-click any pill in the canvas → **📌 Add to Tag List**, or click the **📌** button next to the free-type input. Choose the category and subcategory, then click **Add Tag**. The tag is written directly to the corresponding JSON file on disk.
+| Category | Color | Source |
+|---|---|---|
+| Quality | 🟡 `#f9e2af` | `tags/quality.txt` |
+| Style | 🟢 `#a6e3a1` | `tags/style.txt` |
+| Aesthetic | 🟣 `#cba6f7` | `tags/aesthetic.txt` |
+| Main | 🔵 `#89dceb` | `tags/main.txt` (danbooru) |
+| Negative | 🔴 `#f38ba8` | `tags/negative.txt` |
+| Embedding | ⚪ `#cdd6f4` | Auto-detected from ComfyUI |
+| Wildcard | 🟢 `#94e2d5` | `wildcards/*.yaml` |
+| Custom | ⚪ `#cdd6f4` | Free-typed tags |
 
 ---
 
-## 📋 Presets
+## 🔌 API Endpoints
 
-- **💾 Save Preset** — saves the current pill set under a name (stored in `localStorage`)
-- **📋 Manage Presets** — load, rename, delete, export or import presets as JSON files
+| Method | Path | Description |
+|---|---|---|
+| GET | `/cwk/tags/{key}` | Serve tag file as plain text (quality, style, aesthetic, main, negative) |
+| POST | `/cwk/add_tag` | Append a tag to a tag file (`{ key, tag }`) |
+| GET | `/cwk/embeddings` | List all embedding names (recursive) |
+| GET | `/cwk/wildcards` | List all `.yaml` files in `wildcards/` |
+| GET | `/cwk/wildcards/{filename}` | Serve raw YAML content of a wildcard file |
+| GET | `/cwk/presets` | List all saved presets |
+| POST | `/cwk/presets` | Save a preset (`{ name, category, pills }`) |
+| DELETE | `/cwk/presets/{name}` | Delete a preset by name |
 
 ---
 
