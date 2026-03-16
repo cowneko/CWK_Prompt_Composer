@@ -655,8 +655,10 @@ class CWKPromptComposerNode:
                 "negative_prompt":  ("STRING", {"default": "", "multiline": True}),
             },
             "optional": {
-                "clip":   ("CLIP",),
-                "parser": (cls.PARSERS, {"default": "comfy"}),
+                "clip":           ("CLIP",),
+                "parser":         (cls.PARSERS, {"default": "comfy"}),
+                "flux_guidance":  ("FLOAT", {"default": 3.5, "min": 0.0, "max": 100.0, "step": 0.1}),
+                "zero_out_negative": ("BOOLEAN", {"default": False}),
             },
         }
 
@@ -666,7 +668,7 @@ class CWKPromptComposerNode:
     CATEGORY     = "CWK"
 
     def compose(self, positive_prompt, negative_prompt,
-                clip=None, parser="comfy"):
+                clip=None, parser="comfy", flux_guidance=3.5, zero_out_negative=False):
         positive = positive_prompt.strip()
         negative = negative_prompt.strip()
 
@@ -675,6 +677,28 @@ class CWKPromptComposerNode:
 
         pos_cond = _encode_with_parser(clip, positive, parser)
         neg_cond = _encode_with_parser(clip, negative, parser)
+
+        # ── Flux Guidance ──────────────────────────────────────────────────
+        # Inject guidance value into positive conditioning (like FluxGuidance node)
+        if flux_guidance != 3.5:
+            pos_out = []
+            for t in pos_cond:
+                n = [t[0], t[1].copy()]
+                n[1]["guidance"] = flux_guidance
+                pos_out.append(n)
+            pos_cond = pos_out
+
+        # ── ConditioningZeroOut ────────────────────────────────────────────
+        # Zero out the negative conditioning tensors (like ConditioningZeroOut node)
+        if zero_out_negative:
+            neg_out = []
+            for t in neg_cond:
+                d = t[1].copy()
+                pooled_output = d.get("pooled_output", None)
+                if pooled_output is not None:
+                    d["pooled_output"] = torch.zeros_like(pooled_output)
+                neg_out.append([torch.zeros_like(t[0]), d])
+            neg_cond = neg_out
 
         return (positive, negative, pos_cond, neg_cond)
 

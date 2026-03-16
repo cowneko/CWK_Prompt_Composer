@@ -36,7 +36,7 @@ app.registerExtension({
             const widgetMap = {};
             for (const w of (this.widgets ?? [])) {
                 widgetMap[w.name] = w;
-                if (["positive_prompt", "negative_prompt", "parser"].includes(w.name)) {
+                if (["positive_prompt", "negative_prompt", "parser", "flux_guidance", "zero_out_negative"].includes(w.name)) {
                     w.type        = "converted-widget";
                     w.hidden      = true;
                     w.computeSize = () => [0, -4];
@@ -58,20 +58,32 @@ app.registerExtension({
                 overflow:      "hidden",
             });
 
+            // ── Shared input style helper ────────────────────────────────
+            const inputStyle = {
+                padding: "2px 6px", background: C.surface, color: C.text,
+                border: `1px solid ${C.border}`, borderRadius: "4px",
+                fontSize: "11px", outline: "none",
+            };
+            const stopPropagation = (el) => {
+                for (const evt of ["mousedown", "mouseup", "click", "keydown"]) {
+                    el.addEventListener(evt, (e) => e.stopPropagation());
+                }
+            };
+
             // ── Parser row ───────────────────────────────────────────────
             const parserRow = document.createElement("div");
-            Object.assign(parserRow.style, { display: "flex", alignItems: "center", gap: "8px", flexShrink: "0" });
+            Object.assign(parserRow.style, {
+                display: "flex", alignItems: "center", gap: "8px",
+                flexShrink: "0", flexWrap: "wrap",
+            });
 
+            // Parser label + select
             const parserLabel = document.createElement("span");
             parserLabel.textContent = "Parser";
             Object.assign(parserLabel.style, { color: C.textDim, fontSize: "11px" });
 
             const parserSelect = document.createElement("select");
-            Object.assign(parserSelect.style, {
-                padding: "2px 6px", background: C.surface, color: C.text,
-                border: `1px solid ${C.border}`, borderRadius: "4px",
-                fontSize: "11px", cursor: "pointer", outline: "none",
-            });
+            Object.assign(parserSelect.style, { ...inputStyle, cursor: "pointer" });
             for (const opt of PARSERS) {
                 const o = document.createElement("option");
                 o.value = opt; o.textContent = opt;
@@ -81,11 +93,60 @@ app.registerExtension({
             parserSelect.addEventListener("change", () => {
                 if (widgetMap.parser) { widgetMap.parser.value = parserSelect.value; widgetMap.parser.callback?.(parserSelect.value); }
             });
-            for (const evt of ["mousedown", "mouseup", "click", "keydown"]) {
-                parserSelect.addEventListener(evt, (e) => e.stopPropagation());
-            }
+            stopPropagation(parserSelect);
 
-            parserRow.append(parserLabel, parserSelect);
+            // ── Spacer ───────────────────────────────────────────────────
+            const spacer = document.createElement("div");
+            spacer.style.flex = "1";
+
+            // ── Flux Guidance ────────────────────────────────────────────
+            const guidanceLabel = document.createElement("span");
+            guidanceLabel.textContent = "Flux Guidance";
+            Object.assign(guidanceLabel.style, { color: C.textDim, fontSize: "11px" });
+
+            const guidanceInput = document.createElement("input");
+            guidanceInput.type = "number";
+            guidanceInput.min = "0"; guidanceInput.max = "100"; guidanceInput.step = "0.1";
+            guidanceInput.value = widgetMap.flux_guidance?.value ?? 3.5;
+            Object.assign(guidanceInput.style, { ...inputStyle, width: "52px", textAlign: "center" });
+            guidanceInput.addEventListener("change", () => {
+                let val = parseFloat(guidanceInput.value);
+                if (isNaN(val)) val = 3.5;
+                val = Math.max(0, Math.min(100, val));
+                guidanceInput.value = val;
+                if (widgetMap.flux_guidance) {
+                    widgetMap.flux_guidance.value = val;
+                    widgetMap.flux_guidance.callback?.(val);
+                }
+            });
+            stopPropagation(guidanceInput);
+
+            // ── ConditioningZeroOut toggle ────────────────────────────────
+            const zeroOutLabel = document.createElement("span");
+            zeroOutLabel.textContent = "Zero Out Neg";
+            Object.assign(zeroOutLabel.style, { color: C.textDim, fontSize: "11px" });
+
+            const zeroOutCheckbox = document.createElement("input");
+            zeroOutCheckbox.type = "checkbox";
+            zeroOutCheckbox.checked = widgetMap.zero_out_negative?.value ?? false;
+            Object.assign(zeroOutCheckbox.style, {
+                accentColor: "#f38ba8", cursor: "pointer",
+                width: "14px", height: "14px",
+            });
+            zeroOutCheckbox.addEventListener("change", () => {
+                if (widgetMap.zero_out_negative) {
+                    widgetMap.zero_out_negative.value = zeroOutCheckbox.checked;
+                    widgetMap.zero_out_negative.callback?.(zeroOutCheckbox.checked);
+                }
+            });
+            stopPropagation(zeroOutCheckbox);
+
+            parserRow.append(
+                parserLabel, parserSelect,
+                spacer,
+                guidanceLabel, guidanceInput,
+                zeroOutLabel, zeroOutCheckbox,
+            );
             container.appendChild(parserRow);
 
             // Separator
@@ -130,6 +191,11 @@ app.registerExtension({
             this._cwkWidgetMap     = widgetMap;
             this._cwkSyncing       = (fn) => { _syncing = true; try { fn(); } finally { _syncing = false; } };
 
+            // Store UI control refs for state restore
+            this._cwkGuidanceInput  = guidanceInput;
+            this._cwkZeroOutCheckbox = zeroOutCheckbox;
+            this._cwkParserSelect   = parserSelect;
+
             if (widgetMap.positive_prompt?.value) positivePanel.setValue(widgetMap.positive_prompt.value);
             if (widgetMap.negative_prompt?.value) negativePanel.setValue(widgetMap.negative_prompt.value);
 
@@ -153,7 +219,7 @@ app.registerExtension({
             };
             widget.serializeValue = () => undefined;
 
-            this.size = [380, 520];
+            this.size = [420, 520];
         };
 
         // ── Serialization: save panel state ──────────────────────────────
@@ -200,6 +266,17 @@ app.registerExtension({
                 }
                 if (wm.negative_prompt && this._cwkNegativePanel) {
                     wm.negative_prompt.value = this._cwkNegativePanel.getValue();
+                }
+
+                // Sync UI controls from widget values
+                if (this._cwkParserSelect && wm.parser) {
+                    this._cwkParserSelect.value = wm.parser.value;
+                }
+                if (this._cwkGuidanceInput && wm.flux_guidance) {
+                    this._cwkGuidanceInput.value = wm.flux_guidance.value;
+                }
+                if (this._cwkZeroOutCheckbox && wm.zero_out_negative) {
+                    this._cwkZeroOutCheckbox.checked = wm.zero_out_negative.value;
                 }
             });
 
