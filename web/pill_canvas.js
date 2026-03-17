@@ -4,7 +4,7 @@ export const CATEGORY_COLORS = {
 	style:     "#a6e3a1",
     aesthetic: "#cba6f7",
     main:      "#89dceb",
-    negative:  "#fab387",
+    negative:  "#f38ba8",
     embedding: "#a6e3a1",
     wildcard:  "#94e2d5",
     custom:    "#cdd6f4",
