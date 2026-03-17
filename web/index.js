@@ -207,16 +207,15 @@ app.registerExtension({
             const widget = this.addDOMWidget("cwk_composer_ui", "customtext", container, {
                 getValue: () => "",
                 setValue: () => {},
+                getMinHeight: () => 200,
             });
 
-            widget.computeSize = function (width) {
-                const slotH    = LiteGraph.NODE_SLOT_HEIGHT ?? 20;
-                const numSlots = Math.max(nodeRef.outputs?.length ?? 0, nodeRef.inputs?.length ?? 0);
-                const headerH  = numSlots > 0 ? Math.ceil((numSlots - 1 + 0.7) * slotH) + 18 : 8;
-                const titleH   = LiteGraph.NODE_TITLE_HEIGHT ?? 30;
-                const available = nodeRef.size[1] - titleH - headerH - 12;
-                return [width, Math.max(200, available)];
-            };
+            // Remove any computeSize so LiteGraph treats this as a
+            // growable widget via computeLayoutSize (the default for DOM
+            // widgets). This lets it absorb ALL remaining node space
+            // instead of being fixed-height with dead space below.
+            widget.computeSize = undefined;
+
             widget.serializeValue = () => undefined;
 
             this.size = [420, 520];
